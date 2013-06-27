@@ -8,6 +8,8 @@
 
 #define LED_PIN 13
 
+
+
 MPU6050 accelgyro;
 
 int16_t ax, ay, az;
@@ -17,6 +19,11 @@ int16_t mx, my, mz;
 bool blinkState = false;
 
 const int chipSelect = 10;
+const int LOOP_DELAY = 15; // the i2c communication with the clock chip can be disrupted...
+// ... by too frequent writing; you should therefore always have a slight delay before...
+// ... continuing to the next loop.
+
+
 
 File file;        // represents the log file on the SD-card
 
@@ -28,15 +35,16 @@ char folderName   [8];  // stores name of the folder
 RTC_DS1307 RTC;
 
 void setup() {
-  
+
     Wire.begin();  
-    RTC.begin();
+    RTC.begin();  
 
     if (! RTC.isrunning()) {
       Serial.println("RTC is NOT running!");
+      RTC.adjust(DateTime(__DATE__, __TIME__));
     }
     
-    RTC.adjust(DateTime(__DATE__, __TIME__));
+
     
     delay( 15 );    
     
@@ -104,7 +112,7 @@ void setup() {
     if (! file ) {
       Serial.println("error opening datalog");
       // wait forever since we can't write data
-      while (1) ;
+      while(1) ;
     }
     
 }
@@ -126,15 +134,15 @@ void loop() {
       // current timestamp from the real time clock
       file.print( now.unixtime() ); file.print( "," );
       
-      file.print(ax); file.print( "," ); // acceleration on x-axis
-      file.print(ay); file.print( "," ); // acceleration on y-axis
-      file.print(az); file.print( "," ); // acceleration on z-axis
-      file.print(gx); file.print( "," ); // gyro's x
-      file.print(gy); file.print( "," ); // gyro's y
-      file.print(gz); file.print( "," ); // gyro's z
-      file.print(mx); file.print( "," ); // magnetometer's x
-      file.print(my); file.print( "," ); // magnetometer's y
-      file.print(mz); file.print( "\n"); // magnetometer's z
+      file.print( ax ); file.print( "," ); // acceleration on x-axis
+      file.print( ay ); file.print( "," ); // acceleration on y-axis
+      file.print( az ); file.print( "," ); // acceleration on z-axis
+      file.print( gx ); file.print( "," ); // gyro's x
+      file.print( gy ); file.print( "," ); // gyro's y
+      file.print( gz ); file.print( "," ); // gyro's z
+      file.print( mx ); file.print( "," ); // magnetometer's x
+      file.print( my ); file.print( "," ); // magnetometer's y
+      file.print( mz ); file.print( "\n"); // magnetometer's z
   
       // blink LED to indicate activity
       blinkState = !blinkState;
@@ -147,5 +155,7 @@ void loop() {
     } else {
       Serial.println( "Error opening file." ); 
     }
+    
+    delay( LOOP_DELAY );
     
 }

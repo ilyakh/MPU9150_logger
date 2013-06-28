@@ -7,10 +7,11 @@
 #include "SD.h"
 
 #define LED_PIN 13
+#define MPU_ADDRESS 0x69
 
-
-
-MPU6050 accelgyro(0x69);
+// the address is physically altered to avoid collisions with RTC ...
+// ... that is also set to 0x68 and does not allow remapping.
+MPU6050 accelgyro( MPU_ADDRESS ); 
 
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
@@ -39,7 +40,7 @@ void setup() {
 
     Wire.begin();  
     RTC.begin();  
-
+    
     if (! RTC.isrunning()) {
       Serial.println("RTC is NOT running!");
       // RTC.adjust(DateTime(__DATE__, __TIME__));
@@ -70,8 +71,12 @@ void setup() {
     Serial.print( "Initializing SD card... " );
     pinMode( SS, OUTPUT );
     
+    
     // see if the card is present and can be initialized:
-    if ( !SD.begin( chipSelect ) ) {
+    boolean SD_status = SD.begin( chipSelect );
+    delay( 15 );
+    
+    if ( !SD_status ) {
       Serial.println( "card failed, or not present" );
       // stop
       while(1);
@@ -132,12 +137,12 @@ void loop() {
     DateTime now = RTC.now();
     
     if ( file ) {
+
+      // current timestamp from arduino millis()      
+      file.print( millis() ); file.print( "," );
       
       // current timestamp from the real time clock
       file.print( now.unixtime() ); file.print( "," );
-      
-      // current timestamp from arduino millis()      
-      file.print( millis() ); file.print( "," );
       
       
       file.print( ax ); file.print( "," ); // acceleration on x-axis

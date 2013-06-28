@@ -10,7 +10,7 @@
 
 
 
-MPU6050 accelgyro;
+MPU6050 accelgyro(0x69);
 
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
@@ -19,7 +19,7 @@ int16_t mx, my, mz;
 bool blinkState = false;
 
 const int chipSelect = 10;
-const int LOOP_DELAY = 15; // the i2c communication with the clock chip can be disrupted...
+const int LOOP_DELAY = 30; // the i2c communication with the clock chip can be disrupted...
 // ... by too frequent writing; you should therefore always have a slight delay before...
 // ... continuing to the next loop.
 
@@ -33,6 +33,7 @@ char folderName   [8];  // stores name of the folder
 
 
 RTC_DS1307 RTC;
+RTC_Millis RTC_millis;
 
 void setup() {
 
@@ -41,9 +42,9 @@ void setup() {
 
     if (! RTC.isrunning()) {
       Serial.println("RTC is NOT running!");
-      RTC.adjust(DateTime(__DATE__, __TIME__));
+      // RTC.adjust(DateTime(__DATE__, __TIME__));
     }
-    
+    // RTC.adjust(DateTime(__DATE__, __TIME__));    
 
     
     delay( 15 );    
@@ -101,6 +102,7 @@ void setup() {
     if (! SD.exists( folderName ) ) {
       SD.mkdir( folderName ); 
     }
+    delay(15);
     
     // opens up the file we're going to log to
     sprintf( path, "%s/%s.txt", (char*) folderName, (char*) fileName );
@@ -126,13 +128,17 @@ void loop() {
     //accelgyro.getAcceleration(&ax, &ay, &az);
     //accelgyro.getRotation(&gx, &gy, &gz);
     
-    // read clock
-    DateTime now = RTC.now();    
+    // update clock
+    DateTime now = RTC.now();
     
     if ( file ) {
       
       // current timestamp from the real time clock
       file.print( now.unixtime() ); file.print( "," );
+      
+      // current timestamp from arduino millis()      
+      file.print( millis() ); file.print( "," );
+      
       
       file.print( ax ); file.print( "," ); // acceleration on x-axis
       file.print( ay ); file.print( "," ); // acceleration on y-axis

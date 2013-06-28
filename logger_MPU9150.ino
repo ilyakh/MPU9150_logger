@@ -10,7 +10,7 @@
 
 
 
-MPU6050 accelgyro(0x69);
+MPU6050 mpu(0x69);
 
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
@@ -39,6 +39,7 @@ void setup() {
 
     Wire.begin();  
     RTC.begin();  
+    Serial.begin(57600);
 
     if (! RTC.isrunning()) {
       Serial.println("RTC is NOT running!");
@@ -49,15 +50,22 @@ void setup() {
     
     delay( 15 );    
     
-    Serial.begin(57600);
+
+    
     
     // initialize device
     Serial.println("Initializing I2C devices...");
-    accelgyro.initialize();
+
+    mpu.initialize();
 
     // verify connection
     Serial.println("Testing device connections...");
-    Serial.println( accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed" );
+    Serial.println( mpu.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed" );
+
+    
+    
+    
+
 
     // configure Arduino LED for
     pinMode(LED_PIN, OUTPUT);
@@ -116,17 +124,18 @@ void setup() {
       // wait forever since we can't write data
       while(1) ;
     }
+
     
 }
 
 void loop() {
   
     // read raw accel/gyro measurements from device
-    accelgyro.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
+    mpu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
 
     // these methods (and a few others) are also available
-    //accelgyro.getAcceleration(&ax, &ay, &az);
-    //accelgyro.getRotation(&gx, &gy, &gz);
+    //mpu.getAcceleration(&ax, &ay, &az);
+    //mpu.getRotation(&gx, &gy, &gz);
     
     // update clock
     DateTime now = RTC.now();

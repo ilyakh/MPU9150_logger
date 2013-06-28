@@ -51,11 +51,16 @@ float euler[3];         // [psi, theta, phi]    Euler angle container
 float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 
 
+// uncomment "OUTPUT_READABLE_QUATERNION" if you want to see the actual
+// quaternion components in a [w, x, y, z] format (not best for parsing
+// on a remote host such as Processing or something though)
+#define OUTPUT_READABLE_QUATERNION
+
 // uncomment "OUTPUT_READABLE_EULER" if you want to see Euler angles
 // (in degrees) calculated from the quaternions coming from the FIFO.
 // Note that Euler angles suffer from gimbal lock (for more info, see
 // http://en.wikipedia.org/wiki/Gimbal_lock)
-//#define OUTPUT_READABLE_EULER
+#define OUTPUT_READABLE_EULER
 
 
 // uncomment "OUTPUT_READABLE_YAWPITCHROLL" if you want to see the yaw/
@@ -63,7 +68,7 @@ float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gra
 // from the FIFO. Note this also requires gravity vector calculations.
 // Also note that yaw/pitch/roll angles suffer from gimbal lock (for
 // more info, see: http://en.wikipedia.org/wiki/Gimbal_lock)
-//#define OUTPUT_READABLE_YAWPITCHROLL
+#define OUTPUT_READABLE_YAWPITCHROLL
 
 
 // uncomment "OUTPUT_READABLE_REALACCEL" if you want to see acceleration
@@ -77,7 +82,7 @@ float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gra
 // components with gravity removed and adjusted for the world frame of
 // reference (yaw is relative to initial orientation, since no magnetometer
 // is present in this case). Could be quite handy in some cases.
-//#define OUTPUT_READABLE_WORLDACCEL
+#define OUTPUT_READABLE_WORLDACCEL
 
 
 
@@ -185,7 +190,7 @@ void setup() {
     
     
     // see if the card is present and can be initialized:
-    boolean SD_status = SD.begin( chipSelect );
+    boolean SD_status = SD.begin( chipSelect, 11, 12, 13); // MEGA
     delay( 15 );
     
     if ( !SD_status ) {
@@ -303,21 +308,9 @@ void loop() {
         // .
         // .
         
-        
-        DateTime now = RTC.now();
-        
         // end of writing to file
         file.flush(); // makes sure the information is written to the SD-card...
-        // ... without closing and re-opening the file
-        
-        delay( LOOP_DELAY );
-        
-        
-        // current timestamp from arduino millis() 
-        file.print( millis() ); file.print( "," );
-      
-        // current timestamp from the real time clock
-        file.print( now.unixtime() ); file.print( "," );
+        // ... without closing and re-opening the file        
     }
 
     // reset interrupt flag and get INT_STATUS byte
@@ -326,7 +319,10 @@ void loop() {
 
     // get current FIFO count
     fifoCount = mpu.getFIFOCount();
-
+    
+    // update time
+    DateTime now = RTC.now();
+    
     // check for overflow (this should never happen unless our code is too inefficient)
     if ((mpuIntStatus & 0x10) || fifoCount == 1024) {
         // reset so we can continue cleanly
@@ -345,7 +341,15 @@ void loop() {
         // (this lets us immediately read more without waiting for an interrupt)
         fifoCount -= packetSize;
         
-        /*
+        
+        // current timestamp from arduino millis() 
+        file.print( millis() ); file.print( "," );
+      
+        // current timestamp from the real time clock
+        file.print( now.unixtime() ); file.print( "," );
+        
+        
+        
         #ifdef OUTPUT_READABLE_EULER
             // display Euler angles in degrees
             mpu.dmpGetQuaternion(&q, fifoBuffer);
@@ -366,7 +370,7 @@ void loop() {
             file.print(ypr[1] * 180/M_PI);       file.print( "," );
             file.print(ypr[2] * 180/M_PI);       file.print( "," );
         #endif
-        */
+        
 
         
         #ifdef OUTPUT_READABLE_REALACCEL
@@ -378,11 +382,11 @@ void loop() {
             
             file.print(aaReal.x);               file.print( "," );
             file.print(aaReal.y);               file.print( "," );
-            file.print(aaReal.z);           file.print( "," );
+            file.print(aaReal.z);               file.print( "," );
             
         #endif
 
-        /*
+        
         #ifdef OUTPUT_READABLE_WORLDACCEL
             // display initial world-frame acceleration, adjusted to remove gravity
             // and rotated based on known orientation from quaternion
@@ -393,10 +397,10 @@ void loop() {
             
             file.print(aaWorld.x);            file.print( "," );
             file.print(aaWorld.y);            file.print( "," );
-            file.print(aaWorld.z);            file.print( "," );
+            file.print(aaWorld.z);            // file.print( "," );
             
         #endif
-        */
+        
         
         
         

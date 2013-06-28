@@ -146,6 +146,7 @@ void setup() {
     //////////////////////////////////////////////
     // Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
     // Serial.println(F("Initializing DMP..."));
+    
     devStatus = mpu.dmpInitialize();
 
     // make sure it worked (returns 0 if so)
@@ -369,6 +370,7 @@ void loop() {
             file.print(ypr[0] * 180/M_PI);       file.print( "," );
             file.print(ypr[1] * 180/M_PI);       file.print( "," );
             file.print(ypr[2] * 180/M_PI);       file.print( "," );
+            
         #endif
         
 

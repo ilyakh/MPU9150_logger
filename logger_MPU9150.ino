@@ -13,7 +13,9 @@
 
 // the address is physically altered to avoid collisions with RTC ...
 // ... that is also set to 0x68 and does not allow remapping.
-MPU6050 accelgyro( MPU_ADDRESS ); 
+
+// MPU6050 mpu( MPU_ADDRESS ); // [/] raw-data mode
+MPU6050 mpu( MPU_ADDRESS );
 
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
@@ -53,14 +55,16 @@ float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gra
 // (in degrees) calculated from the quaternions coming from the FIFO.
 // Note that Euler angles suffer from gimbal lock (for more info, see
 // http://en.wikipedia.org/wiki/Gimbal_lock)
-#define OUTPUT_READABLE_EULER
+//#define OUTPUT_READABLE_EULER
+
 
 // uncomment "OUTPUT_READABLE_YAWPITCHROLL" if you want to see the yaw/
 // pitch/roll angles (in degrees) calculated from the quaternions coming
 // from the FIFO. Note this also requires gravity vector calculations.
 // Also note that yaw/pitch/roll angles suffer from gimbal lock (for
 // more info, see: http://en.wikipedia.org/wiki/Gimbal_lock)
-#define OUTPUT_READABLE_YAWPITCHROLL
+//#define OUTPUT_READABLE_YAWPITCHROLL
+
 
 // uncomment "OUTPUT_READABLE_REALACCEL" if you want to see acceleration
 // components with gravity removed. This acceleration reference frame is
@@ -73,12 +77,14 @@ float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gra
 // components with gravity removed and adjusted for the world frame of
 // reference (yaw is relative to initial orientation, since no magnetometer
 // is present in this case). Could be quite handy in some cases.
-#define OUTPUT_READABLE_WORLDACCEL
+//#define OUTPUT_READABLE_WORLDACCEL
 
 
 
-
-
+volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
+void dmpDataReady() {
+    mpuInterrupt = true;
+}
 
 
 
@@ -109,7 +115,7 @@ void setup() {
     RTC.begin();  
     
     if (! RTC.isrunning()) {
-      Serial.println("RTC is NOT running!");
+      // Serial.println("RTC is NOT running!");
       // RTC.adjust(DateTime(__DATE__, __TIME__));
     }
     // RTC.adjust(DateTime(__DATE__, __TIME__));    
@@ -117,39 +123,39 @@ void setup() {
     
     delay( 15 );    
     
-    Serial.begin(57600);
+    // Serial.begin(57600);
     
     // initialize device
-    Serial.println("Initializing I2C devices...");
-    accelgyro.initialize();
+    // Serial.println("Initializing I2C devices...");
+    mpu.initialize();
 
     // verify connection
-    Serial.println("Testing device connections...");
+    // Serial.println("Testing device connections...");
     // [/] raw-data mode
-    // Serial.println( accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed" );
+    // // Serial.println( mpu.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed" );
     
 
 
     ////////////////////////////////////////////////
     ///    DMP-MODE    ////////////////////////////
     //////////////////////////////////////////////
-    Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
-    Serial.println(F("Initializing DMP..."));
+    // Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
+    // Serial.println(F("Initializing DMP..."));
     devStatus = mpu.dmpInitialize();
 
     // make sure it worked (returns 0 if so)
     if (devStatus == 0) {
         // turn on the DMP, now that it's ready
-        Serial.println(F("Enabling DMP..."));
+        // Serial.println(F("Enabling DMP..."));
         mpu.setDMPEnabled(true);
 
         // enable Arduino interrupt detection
-        Serial.println(F("Enabling interrupt detection (Arduino external interrupt 0)..."));
+        // Serial.println(F("Enabling interrupt detection (Arduino external interrupt 0)..."));
         attachInterrupt(0, dmpDataReady, RISING);
         mpuIntStatus = mpu.getIntStatus();
 
         // set our DMP Ready flag so the main loop() function knows it's okay to use it
-        Serial.println(F("DMP ready! Waiting for first interrupt..."));
+        // Serial.println(F("DMP ready! Waiting for first interrupt..."));
         dmpReady = true;
 
         // get expected DMP packet size for later comparison
@@ -161,7 +167,7 @@ void setup() {
         // (if it's going to break, usually the code will be 1)
         Serial.print(F("DMP Initialization failed (code "));
         Serial.print(devStatus);
-        Serial.println(F(")"));
+        // Serial.println(F(")"));
     }
 
 
@@ -183,14 +189,14 @@ void setup() {
     delay( 15 );
     
     if ( !SD_status ) {
-      Serial.println( "card failed, or not present" );
+      // Serial.println( "card failed, or not present" );
       // stop
       while(1);
       
       // [+] enable red debug LED
     }
     
-    Serial.println( "card initialized." );
+    // Serial.println( "card initialized." );
     
     // sets the current DATE as the name of FOLDER
     DateTime now = RTC.now();  
@@ -220,10 +226,10 @@ void setup() {
     file = SD.open( path, FILE_WRITE );
     
     Serial.print( "Writing path: " );
-    Serial.println( path );    
+    // Serial.println( path );    
     
     if (! file ) {
-      Serial.println("error opening datalog");
+      // Serial.println("error opening datalog");
       // wait forever since we can't write data
       while(1) ;
     }
@@ -235,11 +241,11 @@ void setup() {
 void loop() {
   
     // read raw accel/gyro measurements from device
-    accelgyro.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
+    mpu.getMotion9(&ax, &ay, &az, &gx, &gy, &gz, &mx, &my, &mz);
 
     // these methods (and a few others) are also available
-    //accelgyro.getAcceleration(&ax, &ay, &az);
-    //accelgyro.getRotation(&gx, &gy, &gz);
+    //mpu.getAcceleration(&ax, &ay, &az);
+    //mpu.getRotation(&gx, &gy, &gz);
     
     // update clock
     DateTime now = RTC.now();
@@ -272,7 +278,7 @@ void loop() {
       // ... without closing and re-opening the file
     
     } else {
-      Serial.println( "Error opening file." ); 
+      // Serial.println( "Error opening file." ); 
     }
     
     delay( LOOP_DELAY );
@@ -325,7 +331,7 @@ void loop() {
     if ((mpuIntStatus & 0x10) || fifoCount == 1024) {
         // reset so we can continue cleanly
         mpu.resetFIFO();
-        Serial.println(F("FIFO overflow!"));
+        // Serial.println(F("FIFO overflow!"));
 
     // otherwise, check for DMP data ready interrupt (this should happen frequently)
     } else if (mpuIntStatus & 0x02) {
@@ -339,7 +345,7 @@ void loop() {
         // (this lets us immediately read more without waiting for an interrupt)
         fifoCount -= packetSize;
         
-
+        /*
         #ifdef OUTPUT_READABLE_EULER
             // display Euler angles in degrees
             mpu.dmpGetQuaternion(&q, fifoBuffer);
@@ -349,6 +355,7 @@ void loop() {
             file.print(euler[2] * 180/M_PI);       file.print( "," );
             
         #endif
+        
 
         #ifdef OUTPUT_READABLE_YAWPITCHROLL
             // display Euler angles in degrees
@@ -359,7 +366,9 @@ void loop() {
             file.print(ypr[1] * 180/M_PI);       file.print( "," );
             file.print(ypr[2] * 180/M_PI);       file.print( "," );
         #endif
+        */
 
+        
         #ifdef OUTPUT_READABLE_REALACCEL
             // display real acceleration, adjusted to remove gravity
             mpu.dmpGetQuaternion(&q, fifoBuffer);
@@ -373,6 +382,7 @@ void loop() {
             
         #endif
 
+        /*
         #ifdef OUTPUT_READABLE_WORLDACCEL
             // display initial world-frame acceleration, adjusted to remove gravity
             // and rotated based on known orientation from quaternion
@@ -386,6 +396,9 @@ void loop() {
             file.print(aaWorld.z);            file.print( "," );
             
         #endif
+        */
+        
+        
         
         file.print( "\n" );
 

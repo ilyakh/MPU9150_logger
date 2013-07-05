@@ -1,26 +1,3 @@
-////////////////////////////////////////////////////////////////////////////
-//
-//  This file is part of MPU9150Lib
-//
-//  Copyright (c) 2013 Pansenti, LLC
-//
-//  Permission is hereby granted, free of charge, to any person obtaining a copy of 
-//  this software and associated documentation files (the "Software"), to deal in 
-//  the Software without restriction, including without limitation the rights to use, 
-//  copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the 
-//  Software, and to permit persons to whom the Software is furnished to do so, 
-//  subject to the following conditions:
-//
-//  The above copyright notice and this permission notice shall be included in all 
-//  copies or substantial portions of the Software.
-//
-//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, 
-//  INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A 
-//  PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT 
-//  HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION 
-//  OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE 
-//  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
 #include <Wire.h>
 #include "I2Cdev.h"
 #include "MPU9150Lib.h"
@@ -33,7 +10,7 @@
 
 //  DEVICE_TO_USE selects whether the IMU at address 0x68 (default) or 0x69 is used
 //    0 = use the device at 0x68
-//    1 = use the device at ox69
+//    1 = use the device at 0x69
 
 #define  DEVICE_TO_USE    1
 
@@ -57,11 +34,17 @@ MPU9150Lib MPU;                                              // the MPU object
 #define  MPU_MAG_MIX_GYRO_AND_MAG       10                  // a good mix value 
 #define  MPU_MAG_MIX_GYRO_AND_SOME_MAG  50                  // mainly gyros with a bit of mag correction 
 
-#define MPU_LPF_RATE   40 // low pas filter rate and can be between 5 and 188Hz
+#define MPU_LPF_RATE   40 // low pass filter rate and can be between 5 and 188Hz
 #define  SERIAL_PORT_SPEED  115200
+
+
+const char SEPARATOR = ',';
+
 
 void setup()
 {
+  Serial2.begin( 115200 );
+  
   Wire.begin();
   MPU.selectDevice( DEVICE_TO_USE );
   MPU.init( MPU_UPDATE_RATE, MPU_MAG_MIX_GYRO_AND_MAG, MAG_UPDATE_RATE, MPU_LPF_RATE );   // start the MPU
@@ -69,20 +52,47 @@ void setup()
 
 void loop()
 {  
-  MPU.selectDevice(DEVICE_TO_USE);                         // only needed if device has changed since init but good form anyway
-  if (MPU.read()) {                                        // get the latest data if ready yet
-    Serial2.print( millis() );
-    Serial2.print(",");
+  // MPU.selectDevice( DEVICE_TO_USE );                         // only needed if device has changed since init but good form anyway
+  if ( MPU.read() ) {                                        // get the latest data if ready yet
     
-    //  MPU.printQuaternion(MPU.m_rawQuaternion);              // print the raw quaternion from the dmp
-    //  MPU.printVector(MPU.m_rawMag);                         // print the raw mag data
-    Serial2.print( MPU.m_rawAccel[VEC3_Z] );                       // print the raw accel data
-    Serial2.print(",");
-    //  MPU.printAngles(MPU.m_dmpEulerPose);                   // the Euler angles from the dmp quaternion
-    Serial2.print( MPU.m_calAccel[VEC3_Z] );                       // print the calibrated accel data
-    Serial2.print(",");
-    //  MPU.printVector(MPU.m_calMag);                         // print the calibrated mag data
-    //  MPU.printAngles(MPU.m_fusedEulerPose);                 // print the output of the data fusion
-    Serial2.println();
+    recordTimeSinceStart();
+    separate();
+    
+    recordRawAccel();
+    separate();
+    recordCalAccel();
+    
+    endRecord();
+    
   }
+}
+
+
+/**********************************************************/
+/*************   LOGGING FUNCTIONS   **********************/
+/**********************************************************/
+
+
+void recordTimeSinceStart() {
+  Serial2.print( millis() );
+}
+
+void recordRawAccel() {
+    Serial2.print( MPU.m_rawAccel[VEC3_X] ); separate();
+    Serial2.print( MPU.m_rawAccel[VEC3_Y] ); separate();
+    Serial2.print( MPU.m_rawAccel[VEC3_Z] ); 
+}
+
+void recordCalAccel() {
+    Serial2.print( MPU.m_calAccel[VEC3_X] ); separate();
+    Serial2.print( MPU.m_calAccel[VEC3_Y] ); separate();
+    Serial2.print( MPU.m_calAccel[VEC3_Z] ); 
+}
+
+void separate() {
+   Serial2.print( SEPARATOR );
+}
+
+void endRecord() {
+  Serial2.println(); 
 }

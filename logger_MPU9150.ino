@@ -1,3 +1,5 @@
+/*
+
 #include "Wire.h"
 #include "RTClib.h"
 
@@ -174,3 +176,4 @@ void loop() {
     delay( LOOP_DELAY );
     
 }
+*/

@@ -1,3 +1,4 @@
+#include <FlexiTimer2.h>
 #include <Wire.h>
 #include "I2Cdev.h"
 #include "MPU9150Lib.h"
@@ -7,7 +8,6 @@
 #include <inv_mpu.h>
 #include <inv_mpu_dmp_motion_driver.h>
 #include <EEPROM.h>
-#include <MsTimer2.h>
 
 //  DEVICE_TO_USE selects whether the IMU at address 0x68 (default) or 0x69 is used
 //    0 = use the device at 0x68
@@ -15,11 +15,11 @@
 
 #define  DEVICE_TO_USE    1
 
-MPU9150Lib MPU;                                              // the MPU object
+MPU9150Lib MPU; // the MPU object
 
 //  MPU_UPDATE_RATE defines the rate (in Hz) at which the MPU updates the sensor data and DMP output
 
-#define MPU_UPDATE_RATE  (100)
+#define MPU_UPDATE_RATE  (200)
 
 //  MAG_UPDATE_RATE defines the rate (in Hz) at which the MPU updates the magnetometer data
 //  MAG_UPDATE_RATE should be less than or equal to the MPU_UPDATE_RATE
@@ -35,12 +35,34 @@ MPU9150Lib MPU;                                              // the MPU object
 #define  MPU_MAG_MIX_GYRO_AND_MAG       10                  // a good mix value 
 #define  MPU_MAG_MIX_GYRO_AND_SOME_MAG  50                  // mainly gyros with a bit of mag correction 
 
-#define MPU_LPF_RATE   40 // low pass filter rate and can be between 5 and 188Hz
-#define SERIAL_PORT_SPEED  115200
+#define MPU_LPF_RATE                    40 // low pass filter rate and can be between 5 and 188Hz
+#define SERIAL_PORT_SPEED               115200
 
-#define MPU_ACCEL_FSR 8 // defines full-scale range (+/- 2, 4, 8, 16)
+#define MPU_ACCEL_FSR                   8 // defines full-scale range (+/- 2, 4, 8, 16)
 
+
+
+const int RECORD_RATE = 100; // (in Hz) rate of writing to SD-card
 const char SEPARATOR = ',';
+
+
+void readAndRecord() {
+  
+  
+  // if ( MPU.read() ) {
+    
+    recordTimeSinceStart();
+    separate();
+    
+    recordRawAccel();
+    separate();
+    recordCalAccel();
+    
+    endRecord();
+    
+  // }
+  
+}
 
 
 void setup()
@@ -52,10 +74,15 @@ void setup()
   MPU.init( MPU_UPDATE_RATE, MPU_MAG_MIX_GYRO_AND_MAG, MAG_UPDATE_RATE, MPU_LPF_RATE );   // start the MPU
   
   mpu_set_accel_fsr( MPU_ACCEL_FSR ); // sets full-scale range (+/- 2, 4, 8, 16)
+  
+  // set up timed events
+  FlexiTimer2::set( 1, 1.0 / RECORD_RATE, readAndRecord ); // read accelerometer and record its output every
+  FlexiTimer2::start();
 }
 
 void loop()
 {  
+  /*
   // MPU.selectDevice( DEVICE_TO_USE );                         // only needed if device has changed since init but good form anyway
   if ( MPU.read() ) {                                        // get the latest data if ready yet
     
@@ -69,6 +96,9 @@ void loop()
     endRecord();
     
   }
+  */
+  
+  MPU.read();
 }
 
 

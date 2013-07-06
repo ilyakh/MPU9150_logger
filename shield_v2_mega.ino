@@ -7,6 +7,7 @@
 #include <inv_mpu.h>
 #include <inv_mpu_dmp_motion_driver.h>
 #include <EEPROM.h>
+#include <MsTimer2.h>
 
 //  DEVICE_TO_USE selects whether the IMU at address 0x68 (default) or 0x69 is used
 //    0 = use the device at 0x68
@@ -35,8 +36,9 @@ MPU9150Lib MPU;                                              // the MPU object
 #define  MPU_MAG_MIX_GYRO_AND_SOME_MAG  50                  // mainly gyros with a bit of mag correction 
 
 #define MPU_LPF_RATE   40 // low pass filter rate and can be between 5 and 188Hz
-#define  SERIAL_PORT_SPEED  115200
+#define SERIAL_PORT_SPEED  115200
 
+#define MPU_ACCEL_FSR 8 // defines full-scale range (+/- 2, 4, 8, 16)
 
 const char SEPARATOR = ',';
 
@@ -48,6 +50,8 @@ void setup()
   Wire.begin();
   MPU.selectDevice( DEVICE_TO_USE );
   MPU.init( MPU_UPDATE_RATE, MPU_MAG_MIX_GYRO_AND_MAG, MAG_UPDATE_RATE, MPU_LPF_RATE );   // start the MPU
+  
+  mpu_set_accel_fsr( MPU_ACCEL_FSR ); // sets full-scale range (+/- 2, 4, 8, 16)
 }
 
 void loop()
@@ -68,8 +72,11 @@ void loop()
 }
 
 
+
+
+
 /**********************************************************/
-/*************   LOGGING FUNCTIONS   **********************/
+/***********   FORMATTING FUNCTIONS   *********************/
 /**********************************************************/
 
 

@@ -19,7 +19,7 @@ MPU9150Lib MPU; // the MPU object
 
 //  MPU_UPDATE_RATE defines the rate (in Hz) at which the MPU updates the sensor data and DMP output
 
-#define MPU_UPDATE_RATE  (200)
+#define MPU_UPDATE_RATE  (100)
 
 //  MAG_UPDATE_RATE defines the rate (in Hz) at which the MPU updates the magnetometer data
 //  MAG_UPDATE_RATE should be less than or equal to the MPU_UPDATE_RATE
@@ -76,7 +76,7 @@ void setup()
   mpu_set_accel_fsr( MPU_ACCEL_FSR ); // sets full-scale range (+/- 2, 4, 8, 16)
   
   // set up timed events
-  FlexiTimer2::set( 1, 1.0 / RECORD_RATE, readAndRecord ); // read accelerometer and record its output every
+  FlexiTimer2::set( 1000 / RECORD_RATE, readAndRecord ); // read accelerometer and record its output every
   FlexiTimer2::start();
 }
 

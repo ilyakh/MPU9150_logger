@@ -19,7 +19,7 @@ MPU9150Lib MPU; // the MPU object
 
 //  MPU_UPDATE_RATE defines the rate (in Hz) at which the MPU updates the sensor data and DMP output
 
-#define MPU_UPDATE_RATE  (100)
+#define MPU_UPDATE_RATE  (200)
 
 //  MAG_UPDATE_RATE defines the rate (in Hz) at which the MPU updates the magnetometer data
 //  MAG_UPDATE_RATE should be less than or equal to the MPU_UPDATE_RATE
@@ -44,7 +44,7 @@ MPU9150Lib MPU; // the MPU object
 // #define ANNOUNCE_ACCEL_RANGE
 
 
-const int RECORD_RATE = 100; // (in Hz) rate of writing to SD-card
+const int RECORD_RATE = 200; // (in Hz) rate of writing to SD-card
 const char SEPARATOR = ',';
 
 volatile int rawAccelX, rawAccelY, rawAccelZ;
@@ -80,6 +80,9 @@ void setup() {
   // FlexiTimer2::start();
   
   FlexiTimer2::set( 1000 / RECORD_RATE, record ); // records sensor readings
+  
+  // FlexiTimer2::set( 1000 / RECORD_RATE, record ); // records sensor readings
+  
   FlexiTimer2::start();
 }
 

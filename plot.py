@@ -18,7 +18,7 @@ if __name__ == "__main__":
             names=['time', 'raw_x', 'raw_y', 'raw_z', 
                    'dmp_x', 'dmp_y', 'dmp_z' ],
             na_values=['nan'],
-        )
+        )[['time']]
 
         if RAW_ONLY:
             data = data[['time', 'raw_x', 'raw_y', 'raw_z']].copy()
@@ -31,6 +31,8 @@ if __name__ == "__main__":
         sys.exit("file was not found")
     
     
+
+    print "Number of readings:", len( data ) 
     
     p = data.plot( x='time' )
 

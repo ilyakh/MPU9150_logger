@@ -7,6 +7,9 @@ if __name__ == "__main__":
 
     number = sys.argv[1]
 
+    RAW_ONLY = False
+    DMP_ONLY = False
+
     try:
 
         data = pandas.io.parsers.read_csv( 
@@ -16,6 +19,14 @@ if __name__ == "__main__":
                    'dmp_x', 'dmp_y', 'dmp_z' ],
             na_values=['nan'],
         )
+
+        if RAW_ONLY:
+            data = data[['time', 'raw_x', 'raw_y', 'raw_z']].copy()
+        
+        elif DMP_ONLY:
+            data = data[['time', 'dmp_x', 'dmp_y', 'dmp_z']].copy()
+            
+
     except IOError:
         sys.exit("file was not found")
     

@@ -41,6 +41,7 @@ MPU9150Lib MPU; // the MPU object
 #define MPU_ACCEL_FSR                   8 // defines full-scale range (+/- 2, 4, 8, 16)
 
 // #define TALK_TO_USB
+// #define ANNOUNCE_ACCEL_RANGE
 
 
 const int RECORD_RATE = 100; // (in Hz) rate of writing to SD-card
@@ -62,6 +63,13 @@ void setup() {
   MPU.init( MPU_UPDATE_RATE, MPU_MAG_MIX_GYRO_AND_MAG, MAG_UPDATE_RATE, MPU_LPF_RATE );   // start the MPU
   
   mpu_set_accel_fsr( MPU_ACCEL_FSR ); // sets full-scale range (+/- 2, 4, 8, 16)
+  
+  
+  #ifdef ANNOUNCE_ACCEL_RANGE
+    unsigned char accelerometer_range = '2';
+    mpu_get_accel_fsr( &accelerometer_range );
+    Serial.println( accelerometer_range );
+  #endif
   
   Serial2.begin( SD_SERIAL_BAUDRATE );
 
@@ -93,15 +101,17 @@ void loop()
   }
   */
   
-  MPU.read();
+  if( MPU.read() ) {
   
-  rawAccelX = MPU.m_rawAccel[VEC3_X];
-  rawAccelY = MPU.m_rawAccel[VEC3_Y];
-  rawAccelZ = MPU.m_rawAccel[VEC3_Z];
+    rawAccelX = MPU.m_rawAccel[VEC3_X];
+    rawAccelY = MPU.m_rawAccel[VEC3_Y];
+    rawAccelZ = MPU.m_rawAccel[VEC3_Z];
+    
+    calAccelX = MPU.m_calAccel[VEC3_X];
+    calAccelY = MPU.m_calAccel[VEC3_Y];
+    calAccelZ = MPU.m_calAccel[VEC3_Z];
   
-  calAccelX = MPU.m_calAccel[VEC3_X];
-  calAccelY = MPU.m_calAccel[VEC3_Y];
-  calAccelZ = MPU.m_calAccel[VEC3_Z];
+  }
   
 }
 
@@ -122,14 +132,6 @@ void record() {
     endRecord();
   
 }
-
-/*
-
-void readSensors() {
-   MPU.read();
-}
-
-*/
 
 
 

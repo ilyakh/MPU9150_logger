@@ -40,19 +40,23 @@ MPU9150Lib MPU; // the MPU object
 
 #define MPU_ACCEL_FSR                   8 // defines full-scale range (+/- 2, 4, 8, 16)
 
+// #define TALK_TO_USB
 
 
 const int RECORD_RATE = 100; // (in Hz) rate of writing to SD-card
 const char SEPARATOR = ',';
 
-// volatile unsigned int rawAccelX, rawAccelY, rawAccelZ;
-// volatile unsigned int calAccelX, calAccelY, calAccelZ;
+volatile int rawAccelX, rawAccelY, rawAccelZ;
+volatile int calAccelX, calAccelY, calAccelZ;
 
 
 void setup() {
   
   Wire.begin();
-  Serial.begin( 115200 );
+  
+  #ifdef TALK_TO_USB
+    Serial.begin( 115200 );
+  #endif
   
   MPU.selectDevice( DEVICE_TO_USE );
   MPU.init( MPU_UPDATE_RATE, MPU_MAG_MIX_GYRO_AND_MAG, MAG_UPDATE_RATE, MPU_LPF_RATE );   // start the MPU
@@ -91,7 +95,13 @@ void loop()
   
   MPU.read();
   
+  rawAccelX = MPU.m_rawAccel[VEC3_X];
+  rawAccelY = MPU.m_rawAccel[VEC3_Y];
+  rawAccelZ = MPU.m_rawAccel[VEC3_Z];
   
+  calAccelX = MPU.m_calAccel[VEC3_X];
+  calAccelY = MPU.m_calAccel[VEC3_Y];
+  calAccelZ = MPU.m_calAccel[VEC3_Z];
   
 }
 
@@ -133,15 +143,15 @@ void recordTimeSinceStart() {
 }
 
 void recordRawAccel() {
-    Serial2.print( MPU.m_rawAccel[VEC3_X] ); separate();
-    Serial2.print( MPU.m_rawAccel[VEC3_Y] ); separate();
-    Serial2.print( MPU.m_rawAccel[VEC3_Z] ); 
+    Serial2.print( rawAccelX ); separate();
+    Serial2.print( rawAccelY ); separate();
+    Serial2.print( rawAccelZ ); 
 }
 
 void recordCalAccel() {
-    Serial2.print( MPU.m_calAccel[VEC3_X] ); separate();
-    Serial2.print( MPU.m_calAccel[VEC3_Y] ); separate();
-    Serial2.print( MPU.m_calAccel[VEC3_Z] ); 
+    Serial2.print( calAccelX ); separate();
+    Serial2.print( calAccelY ); separate();
+    Serial2.print( calAccelZ ); 
 }
 
 void separate() {

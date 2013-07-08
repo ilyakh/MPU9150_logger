@@ -1,4 +1,3 @@
-#include <FlexiTimer2.h>
 #include <Wire.h>
 #include "I2Cdev.h"
 #include "MPU9150Lib.h"
@@ -41,7 +40,7 @@ MPU9150Lib MPU; // the MPU object
 
 #define MPU_ACCEL_FSR                   4 // defines full-scale range (+/- 2, 4, 8, 16)
 
-// #define TALK_TO_USB
+#define TALK_TO_USB
 // #define MPULIB_DEBUG
 // #define ANNOUNCE_ACCEL_RANGE
 // #define ANNOUNCE_SAMPLE_RATE
@@ -50,7 +49,7 @@ MPU9150Lib MPU; // the MPU object
 const char SEPARATOR = ',';
 
 
-#define RECORD_BUFFER_LENGTH 32
+#define RECORD_BUFFER_LENGTH 16
 #define RECORD_FIELDS 6
 
 
@@ -81,11 +80,9 @@ void setup() {
   #endif
   
   MPU.selectDevice( DEVICE_TO_USE );
-  // MPU.init( MPU_UPDATE_RATE, MPU_MAG_MIX_GYRO_AND_MAG, MAG_UPDATE_RATE, MPU_LPF_RATE );   // start the MPU
-  MPU.init( MPU_UPDATE_RATE, MPU_MAG_MIX_GYRO_ONLY, MAG_UPDATE_RATE, MPU_LPF_RATE );   // start the MPU
+  MPU.init( MPU_UPDATE_RATE, MPU_MAG_MIX_GYRO_AND_MAG, MAG_UPDATE_RATE, MPU_LPF_RATE );   // start the MPU
+  // MPU.init( MPU_UPDATE_RATE, MPU_MAG_MIX_GYRO_ONLY, MAG_UPDATE_RATE, MPU_LPF_RATE );   // start the MPU
   mpu_set_accel_fsr( MPU_ACCEL_FSR ); // sets full-scale range (+/- 2, 4, 8, 16)
-  
-  delay( 50 );
   
   #ifdef ANNOUNCE_ACCEL_RANGE
     unsigned char accelerometer_range[2];
@@ -117,14 +114,17 @@ void loop() {
     record_buffer[record_buffer_counter][CAL_ACCEL_Y] = MPU.m_calAccel[VEC3_Y];
     record_buffer[record_buffer_counter][CAL_ACCEL_Z] = MPU.m_calAccel[VEC3_Z];
     
-    // finally, increases buffer counter
-    if ( record_buffer_counter < RECORD_BUFFER_LENGTH ) {
+    // increases the offset counter for the buffer
+    if ( record_buffer_counter < (RECORD_BUFFER_LENGTH -1) ) {
       record_buffer_counter++;
     } else {
       // write all buffered values
       recordFromBuffer();
       record_buffer_counter = 0;
     }
+    
+    Serial.print( "Record buffer counter: " );
+    Serial.println( record_buffer_counter );
     
   } 
   
@@ -137,7 +137,7 @@ void loop() {
 
 
 void recordFromBuffer() {
-    
+  
   for ( int i = 0; i < RECORD_BUFFER_LENGTH; i++ ) {
 
     Serial2.print( millis() ); separate();
@@ -151,9 +151,8 @@ void recordFromBuffer() {
     Serial2.print( record_buffer[i][CAL_ACCEL_Z] );  
     
     endRecord();
+    
   }
-  
-
 }
 
 

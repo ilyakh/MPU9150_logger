@@ -15,6 +15,7 @@
 
 #define  DEVICE_TO_USE    1
 
+
 MPU9150Lib MPU; // the MPU object
 
 //  MPU_UPDATE_RATE defines the rate (in Hz) at which the MPU updates the sensor data and DMP output
@@ -35,21 +36,42 @@ MPU9150Lib MPU; // the MPU object
 #define  MPU_MAG_MIX_GYRO_AND_MAG       10                  // a good mix value 
 #define  MPU_MAG_MIX_GYRO_AND_SOME_MAG  50                  // mainly gyros with a bit of mag correction 
 
-#define MPU_LPF_RATE                    20 // low pass filter rate and can be between 5 and 188Hz
-#define SD_SERIAL_BAUDRATE              115200 // badurate; serial port for logging
+#define MPU_LPF_RATE                    40 // low pass filter rate and can be between 5 and 188Hz
+#define SD_SERIAL_BAUDRATE              460800 // badurate; serial port for logging
 
-#define MPU_ACCEL_FSR                   8 // defines full-scale range (+/- 2, 4, 8, 16)
+#define MPU_ACCEL_FSR                   4 // defines full-scale range (+/- 2, 4, 8, 16)
 
-// #define TALK_TO_USB
+#define TALK_TO_USB
+// #define MPULIB_DEBUG
 // #define ANNOUNCE_ACCEL_RANGE
+// #define ANNOUNCE_SAMPLE_RATE
 
 
-const int RECORD_RATE = 200; // (in Hz) rate of writing to SD-card
 const char SEPARATOR = ',';
+
+
+#define RECORD_BUFFER_LENGTH 128
+#define RECORD_FIELDS 6
+
+
+int record_buffer[ RECORD_BUFFER_LENGTH ][ RECORD_FIELDS ];
+int record_buffer_counter = 0;
+
+enum RECORD_FIELD_INDEX {
+  RAW_ACCEL_X,
+  RAW_ACCEL_Y,
+  RAW_ACCEL_Z,
+  CAL_ACCEL_X,
+  CAL_ACCEL_Y,
+  CAL_ACCEL_Z
+};
+
+
 
 volatile int rawAccelX, rawAccelY, rawAccelZ;
 volatile int calAccelX, calAccelY, calAccelZ;
 
+long previousTime;
 
 void setup() {
   
@@ -61,60 +83,50 @@ void setup() {
   
   MPU.selectDevice( DEVICE_TO_USE );
   MPU.init( MPU_UPDATE_RATE, MPU_MAG_MIX_GYRO_AND_MAG, MAG_UPDATE_RATE, MPU_LPF_RATE );   // start the MPU
-  
   mpu_set_accel_fsr( MPU_ACCEL_FSR ); // sets full-scale range (+/- 2, 4, 8, 16)
   
+  delay( 50 );
   
   #ifdef ANNOUNCE_ACCEL_RANGE
-    unsigned char accelerometer_range = '2';
+    unsigned char accelerometer_range[2];
     mpu_get_accel_fsr( &accelerometer_range );
+    Serial.print( "Accelerometer range: " );
     Serial.println( accelerometer_range );
   #endif
   
+  #ifdef ANNOUNCE_SAMPLE_RATE
+    unsigned short int sample_rate;
+    mpu_get_sample_rate( &sample_rate );    
+    Serial.print( "Sample rate: " );
+    Serial.println( result );
+  #endif
+  
   Serial2.begin( SD_SERIAL_BAUDRATE );
-
   
-  // set up timed events
-  
-  // FlexiTimer2::set( 1000 / RECORD_RATE, readSensors ); // reads sensor output
-  // FlexiTimer2::start();
-  
-  FlexiTimer2::set( 1000 / RECORD_RATE, record ); // records sensor readings
-  
-  // FlexiTimer2::set( 1000 / RECORD_RATE, record ); // records sensor readings
-  
-  FlexiTimer2::start();
 }
 
-void loop()
-{  
-  /*
-  // MPU.selectDevice( DEVICE_TO_USE );                         // only needed if device has changed since init but good form anyway
-  if ( MPU.read() ) {                                        // get the latest data if ready yet
-    
-    recordTimeSinceStart();
-    separate();
-    
-    recordRawAccel();
-    separate();
-    recordCalAccel();
-    
-    endRecord();
-    
-  }
-  */
+void loop() {
   
   if( MPU.read() ) {
-  
-    rawAccelX = MPU.m_rawAccel[VEC3_X];
-    rawAccelY = MPU.m_rawAccel[VEC3_Y];
-    rawAccelZ = MPU.m_rawAccel[VEC3_Z];
     
-    calAccelX = MPU.m_calAccel[VEC3_X];
-    calAccelY = MPU.m_calAccel[VEC3_Y];
-    calAccelZ = MPU.m_calAccel[VEC3_Z];
-  
-  }
+    record_buffer[record_buffer_counter][RAW_ACCEL_X] = MPU.m_rawAccel[VEC3_X];
+    record_buffer[record_buffer_counter][RAW_ACCEL_Y] = MPU.m_rawAccel[VEC3_Y];
+    record_buffer[record_buffer_counter][RAW_ACCEL_Z] = MPU.m_rawAccel[VEC3_Z];
+    
+    record_buffer[record_buffer_counter][CAL_ACCEL_X] = MPU.m_calAccel[VEC3_X];
+    record_buffer[record_buffer_counter][CAL_ACCEL_Y] = MPU.m_calAccel[VEC3_Y];
+    record_buffer[record_buffer_counter][CAL_ACCEL_Z] = MPU.m_calAccel[VEC3_Z];
+    
+    // finally, increases buffer counter
+    if ( record_buffer_counter < RECORD_BUFFER_LENGTH ) {
+      record_buffer_counter++;
+    } else {
+      // write all buffered values
+      recordFromBuffer();
+      record_buffer_counter = 0;
+    }
+    
+  } 
   
 }
 
@@ -125,17 +137,30 @@ void loop()
 
 void record() {
     
-    recordTimeSinceStart();
-    separate();
+    recordTimeSinceStart(); separate();
     
-    recordRawAccel();
-    separate();
+    recordRawAccel(); separate();
     recordCalAccel();
     
     endRecord();
-  
+
 }
 
+void recordFromBuffer() {
+    
+  for ( int i = 0; i < RECORD_BUFFER_LENGTH; i++ ) {
+    Serial2.print( record_buffer[i][RAW_ACCEL_X] ); separate();
+    Serial2.print( record_buffer[i][RAW_ACCEL_Y] ); separate();
+    Serial2.print( record_buffer[i][RAW_ACCEL_Z] ); separate();
+    Serial2.print( record_buffer[i][CAL_ACCEL_X] ); separate();
+    Serial2.print( record_buffer[i][CAL_ACCEL_Y] ); separate();
+    Serial2.print( record_buffer[i][CAL_ACCEL_Z] );  
+    
+    endRecord();
+  }
+  
+
+}
 
 
 /**********************************************************/
@@ -143,21 +168,25 @@ void record() {
 /**********************************************************/
 
 
+// [-] deprecated
 void recordTimeSinceStart() {
   Serial2.print( millis() );
 }
 
+// [-] deprecated
 void recordRawAccel() {
     Serial2.print( rawAccelX ); separate();
     Serial2.print( rawAccelY ); separate();
     Serial2.print( rawAccelZ ); 
 }
 
+// [-] deprecated
 void recordCalAccel() {
     Serial2.print( calAccelX ); separate();
     Serial2.print( calAccelY ); separate();
     Serial2.print( calAccelZ ); 
 }
+
 
 void separate() {
    Serial2.print( SEPARATOR );

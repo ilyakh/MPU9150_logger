@@ -8,7 +8,7 @@ if __name__ == "__main__":
     number = sys.argv[1]
 
     RAW_ONLY = False
-    DMP_ONLY = False
+    DMP_ONLY = True
 
     try:
 
@@ -18,13 +18,13 @@ if __name__ == "__main__":
             names=['time', 'raw_x', 'raw_y', 'raw_z', 
                    'dmp_x', 'dmp_y', 'dmp_z' ],
             na_values=['nan'],
-        )[['time']]
+        )
 
         if RAW_ONLY:
-            data = data[['time', 'raw_x', 'raw_y', 'raw_z']].copy()
+            data = data[['raw_x', 'raw_y', 'raw_z']].copy()
         
         elif DMP_ONLY:
-            data = data[['time', 'dmp_x', 'dmp_y', 'dmp_z']].copy()
+            data = data[['dmp_x', 'dmp_y', 'dmp_z']].copy()
             
 
     except IOError:
@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
     print "Number of readings:", len( data ) 
     
-    p = data.plot( x='time' )
+    p = data.plot()
 
 
     font = {

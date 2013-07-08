@@ -36,12 +36,12 @@ MPU9150Lib MPU; // the MPU object
 #define  MPU_MAG_MIX_GYRO_AND_MAG       10                  // a good mix value 
 #define  MPU_MAG_MIX_GYRO_AND_SOME_MAG  50                  // mainly gyros with a bit of mag correction 
 
-#define MPU_LPF_RATE                    40 // low pass filter rate and can be between 5 and 188Hz
+#define MPU_LPF_RATE                    20 // low pass filter rate and can be between 5 and 188Hz
 #define SD_SERIAL_BAUDRATE              460800 // badurate; serial port for logging
 
 #define MPU_ACCEL_FSR                   4 // defines full-scale range (+/- 2, 4, 8, 16)
 
-#define TALK_TO_USB
+// #define TALK_TO_USB
 // #define MPULIB_DEBUG
 // #define ANNOUNCE_ACCEL_RANGE
 // #define ANNOUNCE_SAMPLE_RATE
@@ -50,12 +50,15 @@ MPU9150Lib MPU; // the MPU object
 const char SEPARATOR = ',';
 
 
-#define RECORD_BUFFER_LENGTH 128
+#define RECORD_BUFFER_LENGTH 32
 #define RECORD_FIELDS 6
 
 
 int record_buffer[ RECORD_BUFFER_LENGTH ][ RECORD_FIELDS ];
 int record_buffer_counter = 0;
+
+
+
 
 enum RECORD_FIELD_INDEX {
   RAW_ACCEL_X,
@@ -68,10 +71,6 @@ enum RECORD_FIELD_INDEX {
 
 
 
-volatile int rawAccelX, rawAccelY, rawAccelZ;
-volatile int calAccelX, calAccelY, calAccelZ;
-
-long previousTime;
 
 void setup() {
   
@@ -82,7 +81,8 @@ void setup() {
   #endif
   
   MPU.selectDevice( DEVICE_TO_USE );
-  MPU.init( MPU_UPDATE_RATE, MPU_MAG_MIX_GYRO_AND_MAG, MAG_UPDATE_RATE, MPU_LPF_RATE );   // start the MPU
+  // MPU.init( MPU_UPDATE_RATE, MPU_MAG_MIX_GYRO_AND_MAG, MAG_UPDATE_RATE, MPU_LPF_RATE );   // start the MPU
+  MPU.init( MPU_UPDATE_RATE, MPU_MAG_MIX_GYRO_ONLY, MAG_UPDATE_RATE, MPU_LPF_RATE );   // start the MPU
   mpu_set_accel_fsr( MPU_ACCEL_FSR ); // sets full-scale range (+/- 2, 4, 8, 16)
   
   delay( 50 );
@@ -135,23 +135,17 @@ void loop() {
 /***********   TIMED EVENTS  ******************************/
 /**********************************************************/
 
-void record() {
-    
-    recordTimeSinceStart(); separate();
-    
-    recordRawAccel(); separate();
-    recordCalAccel();
-    
-    endRecord();
-
-}
 
 void recordFromBuffer() {
     
   for ( int i = 0; i < RECORD_BUFFER_LENGTH; i++ ) {
+
+    Serial2.print( millis() ); separate();
+    
     Serial2.print( record_buffer[i][RAW_ACCEL_X] ); separate();
     Serial2.print( record_buffer[i][RAW_ACCEL_Y] ); separate();
     Serial2.print( record_buffer[i][RAW_ACCEL_Z] ); separate();
+    
     Serial2.print( record_buffer[i][CAL_ACCEL_X] ); separate();
     Serial2.print( record_buffer[i][CAL_ACCEL_Y] ); separate();
     Serial2.print( record_buffer[i][CAL_ACCEL_Z] );  
@@ -166,27 +160,6 @@ void recordFromBuffer() {
 /**********************************************************/
 /***********   FORMATTING FUNCTIONS   *********************/
 /**********************************************************/
-
-
-// [-] deprecated
-void recordTimeSinceStart() {
-  Serial2.print( millis() );
-}
-
-// [-] deprecated
-void recordRawAccel() {
-    Serial2.print( rawAccelX ); separate();
-    Serial2.print( rawAccelY ); separate();
-    Serial2.print( rawAccelZ ); 
-}
-
-// [-] deprecated
-void recordCalAccel() {
-    Serial2.print( calAccelX ); separate();
-    Serial2.print( calAccelY ); separate();
-    Serial2.print( calAccelZ ); 
-}
-
 
 void separate() {
    Serial2.print( SEPARATOR );

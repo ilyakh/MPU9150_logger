@@ -7,15 +7,15 @@ if __name__ == "__main__":
 
     number = sys.argv[1]
 
-    RAW_ONLY = False
-    DMP_ONLY = False
+    RAW_ONLY = True
+    DMP_ONLY = True
 
     try:
 
         data = pandas.io.parsers.read_csv( 
             "/Volumes/NO NAME/LOG{number}.TXT".format( number=number ),
             index_col=False,
-            names=['millis', 'raw_x', 'raw_y', 'raw_z', 
+            names=['raw_x', 'raw_y', 'raw_z', 
                    'dmp_x', 'dmp_y', 'dmp_z' ],
             na_values=['nan'],
         )
@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
     print "Number of readings:", len( data ) 
     
-    p = data.plot( x="millis" )
+    p = data.plot()
 
 
     font = {

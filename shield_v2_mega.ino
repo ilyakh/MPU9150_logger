@@ -49,25 +49,25 @@ MPU9150Lib MPU; // the MPU object
 // #define ANNOUNCE_ACCEL_RANGE
 // #define ANNOUNCE_SAMPLE_RATE
 
-
 const char SEPARATOR = ',';
-
 
 #define RECORD_BUFFER_LENGTH 128
 #define RECORD_FIELDS 6
 
-
 int record_buffer[ RECORD_BUFFER_LENGTH ][ RECORD_FIELDS ];
 int record_buffer_counter = 0;
 
-
 enum RECORD_FIELD_INDEX {
-  RAW_ACCELEROMETER_X,
-  RAW_ACCELEROMETER_Y,
-  RAW_ACCELEROMETER_Z
+  RAW_ACCELEROMETER_X,      //
+  RAW_ACCELEROMETER_Y,      //
+  RAW_ACCELEROMETER_Z,      //
+                            //  ORDERING OF ITEMS IN THE CSV LOG FILE
+  RAW_GYRO_X,               //
+  RAW_GYRO_Y,               //
+  RAW_GYRO_Z                //
 };
 
-long  raw_quaternion[4]; 
+long  quaternion[4]; 
 short raw_gyro[3];           // in hardware units
 short raw_accelerometer[3];  // in hardware units
 // short raw_magnetometer[3];   // in hardware units
@@ -112,14 +112,16 @@ void loop() {
   
   if ( true ) {
   
-    record_buffer[record_buffer_counter][RAW_ACCELEROMETER_X] = m_rawAccel[VEC3_X];
-    record_buffer[record_buffer_counter][RAW_ACCELEROMETER_Y] = m_rawAccel[VEC3_Y];
-    record_buffer[record_buffer_counter][RAW_ACCELEROMETER_Z] = m_rawAccel[VEC3_Z];
+    record_buffer[record_buffer_counter][RAW_ACCELEROMETER_X] = raw_accelerometer[VEC3_X];
+    record_buffer[record_buffer_counter][RAW_ACCELEROMETER_Y] = raw_accelerometer[VEC3_Y];
+    record_buffer[record_buffer_counter][RAW_ACCELEROMETER_Z] = raw_accelerometer[VEC3_Z];
     
-    record_buffer[record_buffer_counter][RAW_GYRO_X] = m_rawAccel[VEC3_X];
-    record_buffer[record_buffer_counter][RAW_GYRO_Y] = m_rawAccel[VEC3_Y];
-    record_buffer[record_buffer_counter][RAW_GYRO_Z] = m_rawAccel[VEC3_Z];
+    record_buffer[record_buffer_counter][RAW_GYRO_X] = raw_gyro[VEC3_X];
+    record_buffer[record_buffer_counter][RAW_GYRO_Y] = raw_gyro[VEC3_Y];
+    record_buffer[record_buffer_counter][RAW_GYRO_Z] = raw_gyro[VEC3_Z];
     
+    
+    // increase or reset buffer and write its contents to SD-card
     if ( record_buffer_counter < (RECORD_BUFFER_LENGTH -1) ) {
       record_buffer_counter++;
     } else {
@@ -130,7 +132,8 @@ void loop() {
     
     
   }
-
+  
+  // 
   // mpu_read_fifo( m_rawGyro, m_rawAccel, &timestamp, &sensors, &more );
   // increases the offset counter for the buffer  
   
@@ -138,7 +141,7 @@ void loop() {
 
 
 /**********************************************************/
-/***********   TIMED EVENTS  ******************************/
+/***********   RECORD PROCEDURES **************************/
 /**********************************************************/
 
 
@@ -146,9 +149,9 @@ void recordFromBuffer() {
   
   for ( int i = 0; i < RECORD_BUFFER_LENGTH; i++ ) {
     
-    Serial2.print( record_buffer[i][RAW_ACCEL_X] ); separate();
-    Serial2.print( record_buffer[i][RAW_ACCEL_Y] ); separate();
-    Serial2.print( record_buffer[i][RAW_ACCEL_Z] );
+    Serial2.print( record_buffer[i][RAW_ACCELEROMETER_X] ); separate();
+    Serial2.print( record_buffer[i][RAW_ACCELEROMETER_Y] ); separate();
+    Serial2.print( record_buffer[i][RAW_ACCELEROMETER_Z] );
     
     endRecord(); // new line
     

@@ -65,11 +65,11 @@ enum RECORD_FIELD_INDEX {
   RAW_GYRO_X,               //
   RAW_GYRO_Y,               //
   RAW_GYRO_Z,               //
-  
-  RAW_QUATERNION_W,
-  RAW_QUATERNION_X,
-  RAW_QUATERNION_Y,
-  RAW_QUATERNION_Z
+                            //
+  RAW_QUATERNION_W,         //
+  RAW_QUATERNION_X,         //
+  RAW_QUATERNION_Y,         //
+  RAW_QUATERNION_Z          //
 };
 
 long  quaternion[4]; 
@@ -165,7 +165,12 @@ void recordFromBuffer() {
     
     Serial2.print( record_buffer[i][RAW_GYRO_X] ); separate();
     Serial2.print( record_buffer[i][RAW_GYRO_Y] ); separate();
-    Serial2.print( record_buffer[i][RAW_GYRO_Z] );
+    Serial2.print( record_buffer[i][RAW_GYRO_Z] ); separate();
+    
+    Serial2.print( record_buffer[i][RAW_QUATERNION_W] ); separate();
+    Serial2.print( record_buffer[i][RAW_QUATERNION_X] ); separate();
+    Serial2.print( record_buffer[i][RAW_QUATERNION_Y] ); separate();
+    Serial2.print( record_buffer[i][RAW_QUATERNION_Z] );
     
     endRecord(); // new line
     

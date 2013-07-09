@@ -22,7 +22,7 @@ MPU9150Lib MPU; // the MPU object
 
 //  MPU_UPDATE_RATE defines the rate (in Hz) at which the MPU updates the sensor data and DMP output
 
-#define MPU_UPDATE_RATE  (500)
+#define MPU_UPDATE_RATE  (750)
 // #define DMP_SAMPLE_RATE     (200)
 
 //  MAG_UPDATE_RATE defines the rate (in Hz) at which the MPU updates the magnetometer data
@@ -51,13 +51,13 @@ MPU9150Lib MPU; // the MPU object
 
 const char SEPARATOR = ',';
 
-#define RECORD_BUFFER_LENGTH 128
-#define RECORD_FIELDS 6
+#define RECORD_BUFFER_LENGTH 256
+#define RECORD_FIELDS 10
 
 int record_buffer[ RECORD_BUFFER_LENGTH ][ RECORD_FIELDS ];
 int record_buffer_counter = 0;
 
-enum RECORD_FIELD_INDEX {
+enum RECORD_FIELD_INDICES {
   RAW_ACCELEROMETER_X,      //
   RAW_ACCELEROMETER_Y,      //
   RAW_ACCELEROMETER_Z,      //
@@ -125,10 +125,10 @@ void loop() {
     record_buffer[record_buffer_counter][RAW_GYRO_Y] = raw_gyro[VEC3_Y];
     record_buffer[record_buffer_counter][RAW_GYRO_Z] = raw_gyro[VEC3_Z];
     
-    record_buffer[record_buffer_counter][RAW_QUATERNION_W] = raw_gyro[VEC3_Z];
-    record_buffer[record_buffer_counter][RAW_QUATERNION_X] = raw_gyro[VEC3_Z];
-    record_buffer[record_buffer_counter][RAW_QUATERNION_Y] = raw_gyro[VEC3_Z];
-    record_buffer[record_buffer_counter][RAW_QUATERNION_Z] = raw_gyro[VEC3_Z];
+    record_buffer[record_buffer_counter][RAW_QUATERNION_W] = quaternion[0];
+    record_buffer[record_buffer_counter][RAW_QUATERNION_X] = quaternion[1];
+    record_buffer[record_buffer_counter][RAW_QUATERNION_Y] = quaternion[2];
+    record_buffer[record_buffer_counter][RAW_QUATERNION_Z] = quaternion[3];
     
     
     // increase the coutner or if full reset counter and and write buffer contents to external storage
@@ -143,9 +143,7 @@ void loop() {
     
   }
   
-  // 
-  // mpu_read_fifo( m_rawGyro, m_rawAccel, &timestamp, &sensors, &more );
-  // increases the offset counter for the buffer  
+  // if processing of dmp data takes too long, try 'mpu_read_fifo' without the quaternion buffer
   
 }
 

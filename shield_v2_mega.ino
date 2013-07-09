@@ -8,6 +8,9 @@
 #include <inv_mpu_dmp_motion_driver.h>
 #include <EEPROM.h>
 
+
+// #define MPU_MAXIMAL
+
 //  DEVICE_TO_USE selects whether the IMU at address 0x68 (default) or 0x69 is used
 //    0 = use the device at 0x68
 //    1 = use the device at 0x69
@@ -19,7 +22,8 @@ MPU9150Lib MPU; // the MPU object
 
 //  MPU_UPDATE_RATE defines the rate (in Hz) at which the MPU updates the sensor data and DMP output
 
-#define MPU_UPDATE_RATE  (200)
+#define MPU_UPDATE_RATE  (500)
+// #define DMP_SAMPLE_RATE     (200)
 
 //  MAG_UPDATE_RATE defines the rate (in Hz) at which the MPU updates the magnetometer data
 //  MAG_UPDATE_RATE should be less than or equal to the MPU_UPDATE_RATE
@@ -36,11 +40,11 @@ MPU9150Lib MPU; // the MPU object
 #define  MPU_MAG_MIX_GYRO_AND_SOME_MAG  50                  // mainly gyros with a bit of mag correction 
 
 #define MPU_LPF_RATE                    20 // low pass filter rate and can be between 5 and 188Hz
-#define SD_SERIAL_BAUDRATE              460800 // badurate; serial port for logging
+#define SD_SERIAL_BAUDRATE              921600 // baudrate; serial port for logging
 
 #define MPU_ACCEL_FSR                   4 // defines full-scale range (+/- 2, 4, 8, 16)
 
-#define TALK_TO_USB
+// #define TALK_TO_USB
 // #define MPULIB_DEBUG
 // #define ANNOUNCE_ACCEL_RANGE
 // #define ANNOUNCE_SAMPLE_RATE
@@ -49,7 +53,7 @@ MPU9150Lib MPU; // the MPU object
 const char SEPARATOR = ',';
 
 
-#define RECORD_BUFFER_LENGTH 16
+#define RECORD_BUFFER_LENGTH 128
 #define RECORD_FIELDS 6
 
 
@@ -57,18 +61,16 @@ int record_buffer[ RECORD_BUFFER_LENGTH ][ RECORD_FIELDS ];
 int record_buffer_counter = 0;
 
 
-
-
 enum RECORD_FIELD_INDEX {
-  RAW_ACCEL_X,
-  RAW_ACCEL_Y,
-  RAW_ACCEL_Z,
-  CAL_ACCEL_X,
-  CAL_ACCEL_Y,
-  CAL_ACCEL_Z
+  RAW_ACCELEROMETER_X,
+  RAW_ACCELEROMETER_Y,
+  RAW_ACCELEROMETER_Z
 };
 
-
+long  raw_quaternion[4]; 
+short raw_gyro[3];           // in hardware units
+short raw_accelerometer[3];  // in hardware units
+// short raw_magnetometer[3];   // in hardware units
 
 
 void setup() {
@@ -79,10 +81,12 @@ void setup() {
     Serial.begin( 115200 );
   #endif
   
+  Serial2.begin( SD_SERIAL_BAUDRATE );
+  
   MPU.selectDevice( DEVICE_TO_USE );
   MPU.init( MPU_UPDATE_RATE, MPU_MAG_MIX_GYRO_AND_MAG, MAG_UPDATE_RATE, MPU_LPF_RATE );   // start the MPU
-  // MPU.init( MPU_UPDATE_RATE, MPU_MAG_MIX_GYRO_ONLY, MAG_UPDATE_RATE, MPU_LPF_RATE );   // start the MPU
   mpu_set_accel_fsr( MPU_ACCEL_FSR ); // sets full-scale range (+/- 2, 4, 8, 16)
+  dmp_set_fifo_rate( 500 );
   
   #ifdef ANNOUNCE_ACCEL_RANGE
     unsigned char accelerometer_range[2];
@@ -91,30 +95,31 @@ void setup() {
     Serial.println( accelerometer_range );
   #endif
   
-  #ifdef ANNOUNCE_SAMPLE_RATE
-    unsigned short int sample_rate;
-    mpu_get_sample_rate( &sample_rate );    
-    Serial.print( "Sample rate: " );
-    Serial.println( result );
-  #endif
-  
-  Serial2.begin( SD_SERIAL_BAUDRATE );
+  Serial2.print( "Offset: " );
+  Serial2.println( millis() );
   
 }
 
 void loop() {
+    
+  short sensors;
+  // unsigned char sensors;
+  unsigned char more;
+  // unsigned long 
+  unsigned long timestamp;
   
-  if( MPU.read() ) {
+  dmp_read_fifo( raw_gyro, raw_accelerometer, quaternion, &timestamp, &sensors, &more );
+  
+  if ( true ) {
+  
+    record_buffer[record_buffer_counter][RAW_ACCELEROMETER_X] = m_rawAccel[VEC3_X];
+    record_buffer[record_buffer_counter][RAW_ACCELEROMETER_Y] = m_rawAccel[VEC3_Y];
+    record_buffer[record_buffer_counter][RAW_ACCELEROMETER_Z] = m_rawAccel[VEC3_Z];
     
-    record_buffer[record_buffer_counter][RAW_ACCEL_X] = MPU.m_rawAccel[VEC3_X];
-    record_buffer[record_buffer_counter][RAW_ACCEL_Y] = MPU.m_rawAccel[VEC3_Y];
-    record_buffer[record_buffer_counter][RAW_ACCEL_Z] = MPU.m_rawAccel[VEC3_Z];
+    record_buffer[record_buffer_counter][RAW_GYRO_X] = m_rawAccel[VEC3_X];
+    record_buffer[record_buffer_counter][RAW_GYRO_Y] = m_rawAccel[VEC3_Y];
+    record_buffer[record_buffer_counter][RAW_GYRO_Z] = m_rawAccel[VEC3_Z];
     
-    record_buffer[record_buffer_counter][CAL_ACCEL_X] = MPU.m_calAccel[VEC3_X];
-    record_buffer[record_buffer_counter][CAL_ACCEL_Y] = MPU.m_calAccel[VEC3_Y];
-    record_buffer[record_buffer_counter][CAL_ACCEL_Z] = MPU.m_calAccel[VEC3_Z];
-    
-    // increases the offset counter for the buffer
     if ( record_buffer_counter < (RECORD_BUFFER_LENGTH -1) ) {
       record_buffer_counter++;
     } else {
@@ -123,10 +128,11 @@ void loop() {
       record_buffer_counter = 0;
     }
     
-    Serial.print( "Record buffer counter: " );
-    Serial.println( record_buffer_counter );
     
-  } 
+  }
+
+  // mpu_read_fifo( m_rawGyro, m_rawAccel, &timestamp, &sensors, &more );
+  // increases the offset counter for the buffer  
   
 }
 
@@ -139,20 +145,15 @@ void loop() {
 void recordFromBuffer() {
   
   for ( int i = 0; i < RECORD_BUFFER_LENGTH; i++ ) {
-
-    Serial2.print( millis() ); separate();
     
     Serial2.print( record_buffer[i][RAW_ACCEL_X] ); separate();
     Serial2.print( record_buffer[i][RAW_ACCEL_Y] ); separate();
-    Serial2.print( record_buffer[i][RAW_ACCEL_Z] ); separate();
+    Serial2.print( record_buffer[i][RAW_ACCEL_Z] );
     
-    Serial2.print( record_buffer[i][CAL_ACCEL_X] ); separate();
-    Serial2.print( record_buffer[i][CAL_ACCEL_Y] ); separate();
-    Serial2.print( record_buffer[i][CAL_ACCEL_Z] );  
-    
-    endRecord();
+    endRecord(); // new line
     
   }
+  
 }
 
 

@@ -64,7 +64,12 @@ enum RECORD_FIELD_INDEX {
                             //  ORDERING OF ITEMS IN THE CSV LOG FILE
   RAW_GYRO_X,               //
   RAW_GYRO_Y,               //
-  RAW_GYRO_Z                //
+  RAW_GYRO_Z,               //
+  
+  RAW_QUATERNION_W,
+  RAW_QUATERNION_X,
+  RAW_QUATERNION_Y,
+  RAW_QUATERNION_Z
 };
 
 long  quaternion[4]; 
@@ -85,15 +90,17 @@ void setup() {
   
   MPU.selectDevice( DEVICE_TO_USE );
   MPU.init( MPU_UPDATE_RATE, MPU_MAG_MIX_GYRO_AND_MAG, MAG_UPDATE_RATE, MPU_LPF_RATE );   // start the MPU
-  mpu_set_accel_fsr( MPU_ACCEL_FSR ); // sets full-scale range (+/- 2, 4, 8, 16)
-  dmp_set_fifo_rate( 500 );
   
-  #ifdef ANNOUNCE_ACCEL_RANGE
-    unsigned char accelerometer_range[2];
-    mpu_get_accel_fsr( &accelerometer_range );
-    Serial.print( "Accelerometer range: " );
-    Serial.println( accelerometer_range );
-  #endif
+  mpu_set_accel_fsr( MPU_ACCEL_FSR ); // sets full-scale range (+/- 2, 4, 8, 16)
+  dmp_set_fifo_rate( MPU_UPDATE_RATE );
+  
+  
+                                                              #ifdef ANNOUNCE_ACCEL_RANGE
+                                                                unsigned char accelerometer_range[2];
+                                                                mpu_get_accel_fsr( &accelerometer_range );
+                                                                Serial.print( "Accelerometer range: " );
+                                                                Serial.println( accelerometer_range );
+                                                              #endif
   
   Serial2.print( "Offset: " );
   Serial2.println( millis() );
@@ -103,14 +110,12 @@ void setup() {
 void loop() {
     
   short sensors;
-  // unsigned char sensors;
   unsigned char more;
-  // unsigned long 
   unsigned long timestamp;
   
   dmp_read_fifo( raw_gyro, raw_accelerometer, quaternion, &timestamp, &sensors, &more );
   
-  if ( true ) {
+  if ( true ) { // leave for ritual reasons
   
     record_buffer[record_buffer_counter][RAW_ACCELEROMETER_X] = raw_accelerometer[VEC3_X];
     record_buffer[record_buffer_counter][RAW_ACCELEROMETER_Y] = raw_accelerometer[VEC3_Y];
@@ -120,8 +125,13 @@ void loop() {
     record_buffer[record_buffer_counter][RAW_GYRO_Y] = raw_gyro[VEC3_Y];
     record_buffer[record_buffer_counter][RAW_GYRO_Z] = raw_gyro[VEC3_Z];
     
+    record_buffer[record_buffer_counter][RAW_QUATERNION_W] = raw_gyro[VEC3_Z];
+    record_buffer[record_buffer_counter][RAW_QUATERNION_X] = raw_gyro[VEC3_Z];
+    record_buffer[record_buffer_counter][RAW_QUATERNION_Y] = raw_gyro[VEC3_Z];
+    record_buffer[record_buffer_counter][RAW_QUATERNION_Z] = raw_gyro[VEC3_Z];
     
-    // increase or reset buffer and write its contents to SD-card
+    
+    // increase the coutner or if full reset counter and and write buffer contents to external storage
     if ( record_buffer_counter < (RECORD_BUFFER_LENGTH -1) ) {
       record_buffer_counter++;
     } else {
@@ -151,7 +161,11 @@ void recordFromBuffer() {
     
     Serial2.print( record_buffer[i][RAW_ACCELEROMETER_X] ); separate();
     Serial2.print( record_buffer[i][RAW_ACCELEROMETER_Y] ); separate();
-    Serial2.print( record_buffer[i][RAW_ACCELEROMETER_Z] );
+    Serial2.print( record_buffer[i][RAW_ACCELEROMETER_Z] ); separate();
+    
+    Serial2.print( record_buffer[i][RAW_GYRO_X] ); separate();
+    Serial2.print( record_buffer[i][RAW_GYRO_Y] ); separate();
+    Serial2.print( record_buffer[i][RAW_GYRO_Z] );
     
     endRecord(); // new line
     

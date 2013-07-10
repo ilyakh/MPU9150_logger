@@ -22,7 +22,7 @@ MPU9150Lib MPU; // the MPU object
 
 //  MPU_UPDATE_RATE defines the rate (in Hz) at which the MPU updates the sensor data and DMP output
 
-#define MPU_UPDATE_RATE  (100)
+#define MPU_UPDATE_RATE  (1000)
 // #define DMP_SAMPLE_RATE     (200)
 
 //  MAG_UPDATE_RATE defines the rate (in Hz) at which the MPU updates the magnetometer data
@@ -52,7 +52,7 @@ MPU9150Lib MPU; // the MPU object
 
 const char SEPARATOR = ',';
 
-#define RECORD_BUFFER_LENGTH 16
+#define RECORD_BUFFER_LENGTH 1
 #define RECORD_FIELDS 7
 
 int record_buffer[ RECORD_BUFFER_LENGTH ][ RECORD_FIELDS ];
@@ -69,10 +69,10 @@ enum RECORD_FIELD_INDICES {
   RAW_GYRO_Y,               //
   RAW_GYRO_Z,               //
                             //
-  RAW_QUATERNION_W,         //
-  RAW_QUATERNION_X,         //
-  RAW_QUATERNION_Y,         //
-  RAW_QUATERNION_Z          //
+  // RAW_QUATERNION_W,         //
+  // RAW_QUATERNION_X,         //
+  // RAW_QUATERNION_Y,         //
+  // RAW_QUATERNION_Z          //
 };
 
 long  quaternion[4]; 
@@ -107,63 +107,67 @@ void setup() {
   
 }
 
-#define ENABLE
-
 void loop() {
   
   short sensors;
   unsigned char more;
   unsigned long timestamp;
-  // long timestamp;
 
   if ( millis() < 10000 ) { // leave for ritual reasons
     
-    dmp_read_fifo( raw_gyro, raw_accelerometer, quaternion, &timestamp, &sensors, &more );
-    Serial.println( raw_gyro[VEC3_Z] );
+    // dmp_read_fifo( raw_gyro, raw_accelerometer, quaternion, &timestamp, &sensors, &more );
     
     
-    #ifdef ENABLE
-    
-    /*
-    if ( millis() > 60000 ) { // leave for ritual reasons
-      while(1) {} // halt
-    }
-    */
+    mpu_get_accel_reg( raw_accelerometer, &timestamp );
+    mpu_get_gyro_reg( raw_gyro, &timestamp );
     
     if ( lastTimestamp < timestamp ) {
-
+      
+      /*
       record_buffer[record_buffer_counter][TIME] = timestamp;
       
       record_buffer[record_buffer_counter][RAW_ACCELEROMETER_X] = raw_accelerometer[VEC3_X];
       record_buffer[record_buffer_counter][RAW_ACCELEROMETER_Y] = raw_accelerometer[VEC3_Y];
       record_buffer[record_buffer_counter][RAW_ACCELEROMETER_Z] = raw_accelerometer[VEC3_Z];
       
+      
       record_buffer[record_buffer_counter][RAW_GYRO_X] = raw_gyro[VEC3_X];
       record_buffer[record_buffer_counter][RAW_GYRO_Y] = raw_gyro[VEC3_Y];
       record_buffer[record_buffer_counter][RAW_GYRO_Z] = raw_gyro[VEC3_Z];
       
-      /*
-      record_buffer[record_buffer_counter][RAW_QUATERNION_W] = quaternion[0];
-      record_buffer[record_buffer_counter][RAW_QUATERNION_X] = quaternion[1];
-      record_buffer[record_buffer_counter][RAW_QUATERNION_Y] = quaternion[2];
-      record_buffer[record_buffer_counter][RAW_QUATERNION_Z] = quaternion[3];
-      */
+        
+      // record_buffer[record_buffer_counter][RAW_QUATERNION_W] = quaternion[0];
+      // record_buffer[record_buffer_counter][RAW_QUATERNION_X] = quaternion[1];
+      // record_buffer[record_buffer_counter][RAW_QUATERNION_Y] = quaternion[2];
+      // record_buffer[record_buffer_counter][RAW_QUATERNION_Z] = quaternion[3];
       
       
-      // increase the coutner or if full reset counter and and write buffer contents to external storage
+      
+      
+      // increase the counter or if full reset counter and and write buffer contents to external storage
       if ( record_buffer_counter < (RECORD_BUFFER_LENGTH -1) ) {
         record_buffer_counter++;
       } else {
         // write all buffered values
         recordFromBuffer();
         record_buffer_counter = 0;
-      }  
+      }
+      */
+      
+      record( timestamp, raw_accelerometer, raw_gyro );
+      
+      raw_accelerometer[VEC3_X] = 0;
+      raw_accelerometer[VEC3_Y] = 0;
+      raw_accelerometer[VEC3_Z] = 0;
+      
+      raw_gyro[VEC3_X] = 0;
+      raw_gyro[VEC3_Y] = 0;
+      raw_gyro[VEC3_Z] = 0;  
   
     }
     
     lastTimestamp = timestamp;
     
-    #endif
   
   } else {
     
@@ -208,6 +212,21 @@ void recordFromBuffer() {
     
   }
   
+}
+
+void record( unsigned long timestamp, short *accelerometer, short *gyro ) {
+  
+    Serial2.print( timestamp ); separate();
+    
+    Serial2.print( accelerometer[VEC3_X] ); separate();
+    Serial2.print( accelerometer[VEC3_Y] ); separate();
+    Serial2.print( accelerometer[VEC3_Z] ); separate();
+    
+    Serial2.print( gyro[VEC3_X] ); separate();
+    Serial2.print( gyro[VEC3_X] ); separate();
+    Serial2.print( gyro[VEC3_X] );
+    
+    endRecord();
 }
 
 

@@ -1,3 +1,4 @@
+#include <FlexiTimer2.h>
 #include <Wire.h>
 #include "I2Cdev.h"
 #include "MPU9150Lib.h"
@@ -81,13 +82,14 @@ short raw_accelerometer[3];  // in hardware units
 // short raw_magnetometer[3];   // in hardware units
 
 unsigned long lastTimestamp;
+short sensors;
+unsigned char more;
+unsigned long timestamp;
 
 void setup() {
   
   Wire.begin();
   TWBR = 12; // change I2C to 400 mHz
-  
-  
   
   #ifdef TALK_TO_USB
     Serial.begin( 115200 );
@@ -103,27 +105,26 @@ void setup() {
   
   
   // dmp_set_fifo_rate( MPU_UPDATE_RATE );
-  // mpu_set_sample_rate( MPU_UPDATE_RATE ); // allerede satt i init
+  mpu_set_sample_rate( MPU_UPDATE_RATE ); // allerede satt i init
+  
+  FlexiTimer2::set( 250, recordFromBuffer );
+  FlexiTimer2::start();
   
 }
 
 void loop() {
   
-  short sensors;
-  unsigned char more;
-  unsigned long timestamp;
-
   if ( millis() < 10000 ) { // leave for ritual reasons
     
     // dmp_read_fifo( raw_gyro, raw_accelerometer, quaternion, &timestamp, &sensors, &more );
     
     
-    mpu_get_accel_reg( raw_accelerometer, &timestamp );
-    mpu_get_gyro_reg( raw_gyro, &timestamp );
+    // mpu_get_accel_reg( raw_accelerometer, &timestamp );
+    // mpu_get_gyro_reg( raw_gyro, &timestamp );
     
-    if ( lastTimestamp < timestamp ) {
+    // if ( lastTimestamp < timestamp ) {
       
-      /*
+      
       record_buffer[record_buffer_counter][TIME] = timestamp;
       
       record_buffer[record_buffer_counter][RAW_ACCELEROMETER_X] = raw_accelerometer[VEC3_X];
@@ -152,22 +153,21 @@ void loop() {
         recordFromBuffer();
         record_buffer_counter = 0;
       }
-      */
       
-      record( timestamp, raw_accelerometer, raw_gyro );
       
+      readSensors();       
+      /*
       raw_accelerometer[VEC3_X] = 0;
       raw_accelerometer[VEC3_Y] = 0;
       raw_accelerometer[VEC3_Z] = 0;
       
       raw_gyro[VEC3_X] = 0;
       raw_gyro[VEC3_Y] = 0;
-      raw_gyro[VEC3_Z] = 0;  
+      raw_gyro[VEC3_Z] = 0;
+      */
   
-    }
-    
-    lastTimestamp = timestamp;
-    
+    // }
+  
   
   } else {
     
@@ -177,6 +177,7 @@ void loop() {
     while(1) {}
     
   }
+  
   
   
 }
@@ -214,17 +215,22 @@ void recordFromBuffer() {
   
 }
 
-void record( unsigned long timestamp, short *accelerometer, short *gyro ) {
+void readSensors() {
+    mpu_get_accel_reg( raw_accelerometer, &timestamp );
+    mpu_get_gyro_reg( raw_gyro, &timestamp );
+}
+
+void record() {
   
     Serial2.print( timestamp ); separate();
     
-    Serial2.print( accelerometer[VEC3_X] ); separate();
-    Serial2.print( accelerometer[VEC3_Y] ); separate();
-    Serial2.print( accelerometer[VEC3_Z] ); separate();
+    Serial2.print( raw_accelerometer[VEC3_X] ); separate();
+    Serial2.print( raw_accelerometer[VEC3_Y] ); separate();
+    Serial2.print( raw_accelerometer[VEC3_Z] ); separate();
     
-    Serial2.print( gyro[VEC3_X] ); separate();
-    Serial2.print( gyro[VEC3_X] ); separate();
-    Serial2.print( gyro[VEC3_X] );
+    Serial2.print( raw_gyro[VEC3_X] ); separate();
+    Serial2.print( raw_gyro[VEC3_X] ); separate();
+    Serial2.print( raw_gyro[VEC3_X] );
     
     endRecord();
 }

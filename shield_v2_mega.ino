@@ -1,4 +1,3 @@
-#include <FlexiTimer2.h>
 #include <Wire.h>
 #include "I2Cdev.h"
 #include "MPU9150Lib.h"
@@ -49,7 +48,7 @@ MPU9150Lib MPU; // the MPU object
 // #define TALK_TO_USB
 // #define MPULIB_DEBUG
 // #define ANNOUNCE_ACCEL_RANGE
-// #define ANNOUNCE_SAMPLE_RATE
+// #define ANNOUNCE_SAMPLE_RATE1000
 
 const char SEPARATOR = ',';
 
@@ -58,6 +57,7 @@ const char SEPARATOR = ',';
 
 int record_buffer[ RECORD_BUFFER_LENGTH ][ RECORD_FIELDS ];
 int record_buffer_counter = 0;
+
 
 enum RECORD_FIELD_INDICES {
   TIME,
@@ -107,8 +107,7 @@ void setup() {
   // dmp_set_fifo_rate( MPU_UPDATE_RATE );
   mpu_set_sample_rate( MPU_UPDATE_RATE ); // allerede satt i init
   
-  FlexiTimer2::set( 250, recordFromBuffer );
-  FlexiTimer2::start();
+
   
 }
 
@@ -116,9 +115,7 @@ void loop() {
   
   if ( millis() < 10000 ) { // leave for ritual reasons
     
-    // dmp_read_fifo( raw_gyro, raw_accelerometer, quaternion, &timestamp, &sensors, &more );
-    
-    
+    // dmp_read_fifo( raw_gyro, raw_accelerometer, quaternion, &timestamp, &sensors, &more );    
     // mpu_get_accel_reg( raw_accelerometer, &timestamp );
     // mpu_get_gyro_reg( raw_gyro, &timestamp );
     
@@ -155,7 +152,9 @@ void loop() {
       }
       
       
-      readSensors();       
+      readSensors();
+      
+      
       /*
       raw_accelerometer[VEC3_X] = 0;
       raw_accelerometer[VEC3_Y] = 0;
@@ -170,8 +169,6 @@ void loop() {
   
   
   } else {
-    
-    // recordFromBuffer();
     
     // one minute has elapsed, do nothing
     while(1) {}
@@ -200,7 +197,7 @@ void recordFromBuffer() {
     
     Serial2.print( record_buffer[i][RAW_GYRO_X] ); separate();
     Serial2.print( record_buffer[i][RAW_GYRO_Y] ); separate();
-    Serial2.print( record_buffer[i][RAW_GYRO_Z] );
+    Serial2.print( record_buffer[i][RAW_GYRO_Z] ); // separate();
     
     /*
     Serial2.print( record_buffer[i][RAW_QUATERNION_W] ); separate();

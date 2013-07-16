@@ -48,11 +48,13 @@ MPU9150Lib MPU; // the MPU object
 // #define TALK_TO_USB
 // #define MPULIB_DEBUG
 // #define ANNOUNCE_ACCEL_RANGE
-// #define ANNOUNCE_SAMPLE_RATE1000
+// #define ANNOUNCE_SAMPLE_RATE
+
+#define TIME_LIMIT 0 // (in milliseconds) time limit for any recording session
 
 const char SEPARATOR = ',';
 
-#define RECORD_BUFFER_LENGTH 1
+#define RECORD_BUFFER_LENGTH 32
 #define RECORD_FIELDS 7
 
 int record_buffer[ RECORD_BUFFER_LENGTH ][ RECORD_FIELDS ];
@@ -98,29 +100,27 @@ void setup() {
   Serial2.begin( SD_SERIAL_BAUDRATE );
   
   MPU.selectDevice( DEVICE_TO_USE );
-  MPU.init( MPU_UPDATE_RATE, MPU_MAG_MIX_GYRO_ONLY, MAG_UPDATE_RATE, MPU_LPF_RATE );   // start the MPU
+  MPU.init( MPU_UPDATE_RATE, MPU_MAG_MIX_GYRO_AND_SOME_MAG, MAG_UPDATE_RATE, MPU_LPF_RATE );   // start the MPU
   
   mpu_set_accel_fsr( MPU_ACCEL_FSR ); // sets full-scale range (+/- 2, 4, 8, 16)
   mpu_set_gyro_fsr( MPU_GYRO_FSR ); // (+/- 250, 500, 1000, 2000)
-  
+  //srod wuz her
   
   // dmp_set_fifo_rate( MPU_UPDATE_RATE );
   mpu_set_sample_rate( MPU_UPDATE_RATE ); // allerede satt i init
-  
-
   
 }
 
 void loop() {
   
-  if ( millis() < 10000 ) { // leave for ritual reasons
+  if ( millis() < TIME_LIMIT || TIME_LIMIT == 0 ) { // leave for ritual reasons
     
-    // dmp_read_fifo( raw_gyro, raw_accelerometer, quaternion, &timestamp, &sensors, &more );    
+    readSensorsDmpFromFifo();
+    
+    if ( lastTimestamp < timestamp ) {
+    
     // mpu_get_accel_reg( raw_accelerometer, &timestamp );
     // mpu_get_gyro_reg( raw_gyro, &timestamp );
-    
-    // if ( lastTimestamp < timestamp ) {
-      
       
       record_buffer[record_buffer_counter][TIME] = timestamp;
       
@@ -128,19 +128,14 @@ void loop() {
       record_buffer[record_buffer_counter][RAW_ACCELEROMETER_Y] = raw_accelerometer[VEC3_Y];
       record_buffer[record_buffer_counter][RAW_ACCELEROMETER_Z] = raw_accelerometer[VEC3_Z];
       
-      
       record_buffer[record_buffer_counter][RAW_GYRO_X] = raw_gyro[VEC3_X];
       record_buffer[record_buffer_counter][RAW_GYRO_Y] = raw_gyro[VEC3_Y];
       record_buffer[record_buffer_counter][RAW_GYRO_Z] = raw_gyro[VEC3_Z];
       
-        
       // record_buffer[record_buffer_counter][RAW_QUATERNION_W] = quaternion[0];
       // record_buffer[record_buffer_counter][RAW_QUATERNION_X] = quaternion[1];
       // record_buffer[record_buffer_counter][RAW_QUATERNION_Y] = quaternion[2];
       // record_buffer[record_buffer_counter][RAW_QUATERNION_Z] = quaternion[3];
-      
-      
-      
       
       // increase the counter or if full reset counter and and write buffer contents to external storage
       if ( record_buffer_counter < (RECORD_BUFFER_LENGTH -1) ) {
@@ -151,9 +146,9 @@ void loop() {
         record_buffer_counter = 0;
       }
       
+    } // time limit
       
-      readSensors();
-      
+      lastTimestamp = timestamp;
       
       /*
       raw_accelerometer[VEC3_X] = 0;
@@ -174,8 +169,6 @@ void loop() {
     while(1) {}
     
   }
-  
-  
   
 }
 
@@ -212,9 +205,14 @@ void recordFromBuffer() {
   
 }
 
-void readSensors() {
+void readSensorsFromRegisters() {
     mpu_get_accel_reg( raw_accelerometer, &timestamp );
     mpu_get_gyro_reg( raw_gyro, &timestamp );
+}
+
+
+void readSensorsDmpFromFifo() {
+    dmp_read_fifo( raw_gyro, raw_accelerometer, quaternion, &timestamp, &sensors, &more );
 }
 
 void record() {

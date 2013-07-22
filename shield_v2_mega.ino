@@ -205,7 +205,7 @@ void loop() {
           record_buffer_counter++;
         } else {
             recordFromBuffer(); // write down all buffered values
-            record_buffer_counter = 0; // reset buffer counter
+            record_buffer_counter = 0; // reset buffer counter (and start replacing old values with new)
         }
         
       } // time limit

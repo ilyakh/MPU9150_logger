@@ -7,24 +7,18 @@ if __name__ == "__main__":
 
     number = sys.argv[1]
 
-    RAW_ONLY = True
-    DMP_ONLY = False
-
     try:
 
         data = pandas.io.parsers.read_csv( 
-            "/Volumes/NO NAME/LOG{number}.TXT".format( number=number ),
+            "/Volumes/TUSENFRYD2/LOG{number}.TXT".format( number=number ),
             index_col=False,
-            names=['raw_x', 'raw_y', 'raw_z'], 
-                  # 'dmp_x', 'dmp_y', 'dmp_z' ],
+            names=['time',
+                   'accel_x', 'accel_y', 'accel_z', 
+                   'gyro_x', 'gyro_y', 'gyro_z' ],
             na_values=['nan'],
         )
 
-        if RAW_ONLY:
-            data = data[['raw_x', 'raw_y', 'raw_z']].copy()
-        
-        elif DMP_ONLY:
-            data = data[['dmp_x', 'dmp_y', 'dmp_z']].copy()
+
             
 
     except IOError:
@@ -35,6 +29,19 @@ if __name__ == "__main__":
     print "Number of readings:", len( data ) 
     
     p = data.plot()
+
+    timestamps = list( data['time'].values )
+
+    delta_t = []
+    for i in range( len(timestamps) -1 ):
+        delta_t.append(
+            timestamps[i+1] - timestamps[i]
+        )
+
+    print delta_t[0:50]
+
+    print "Maximal timedelta", max( delta_t )
+    print "Average timedelta", ( sum( delta_t) / len( delta_t ) )
 
 
     font = {
@@ -47,8 +54,4 @@ if __name__ == "__main__":
     
     
     pyplot.rc( 'font', **font )
-    pyplot.show( block=True )
-
-    print data.head()
-    
-    
+    pyplot.show( block=True )    

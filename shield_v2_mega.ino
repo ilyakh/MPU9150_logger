@@ -65,7 +65,6 @@ const char SEPARATOR = ',';
 signed short record_buffer[ RECORD_BUFFER_LENGTH ][ RECORD_FIELDS ];  // buffer for the accelerometer and gyro data (short integers)
 unsigned long time_buffer[ RECORD_BUFFER_LENGTH ];             // buffer for time (has own buffer due to different type: unsigned long)
 
-
 int record_buffer_counter = 0; // counter for _both_ time and record buffer
 
 
@@ -99,11 +98,18 @@ unsigned long timestamp;
 unsigned long start_time;
 boolean active = false;
 
+////
+//  IMPORTANT! This parameter configures the device to either accept 
+///
+boolean SWITCH_ENABLED = true;
+
 int inactive_state_counter = 0;
 int active_state_counter = 0;
 
 int INACTIVE_THRESHOLD = 50;
 int ACTIVE_THRESHOLD = 25;
+
+
 
 
 void setup() {
@@ -126,10 +132,7 @@ void setup() {
   // dmp_set_fifo_rate( MPU_UPDATE_RATE );
   mpu_set_sample_rate( MPU_UPDATE_RATE ); // allerede satt i init
   
-  #ifdef ENABLE_SWITCH
-    // set the toggle pin
-    pinMode( SWITCH_PIN, INPUT );
-  #endif
+  if ( SWITCH_ENABLED ) { pinMode( SWITCH_PIN, INPUT ); }
   
 }
 
@@ -137,7 +140,7 @@ void setup() {
 
 void loop() {
   
-  if ( digitalRead( SWITCH_PIN ) ) {
+  if ( switchStatus() ) {
     
     inactive_state_counter = 0;
     
@@ -169,7 +172,7 @@ void loop() {
   }
   
   
-  if ( active ) {
+  if ( active || (! SWITCH_ENABLED) ) {
     
     if ( millis() < TIME_LIMIT || TIME_LIMIT == 0 ) { // TIME_LIMIT limits the recording sessions, and records until power loss if 0
       
@@ -289,6 +292,28 @@ void record() {
     endRecord();
 }
 
+/**********************************************************/
+/***********   DEVICE STATE       *************************/
+/**********************************************************/
+
+boolean switchStatus() {
+  // short: returns the current status of the switch
+  // important:
+  // mind the mapping
+  //  - HIGH voltage means OFF
+  //  - LOW voltage means ON
+  // ... to avoid fluctuations during power loss due to vibration.
+  
+  if ( digitalRead( SWITCH_PIN ) ) {
+    return false; 
+  } else {
+    return true; 
+  }
+}
+
+/**********************************************************/
+/***********   TIMING FUNCTIONS   *************************/
+/**********************************************************/
 
 unsigned long millisFromStart() {
   return millis() - start_time;

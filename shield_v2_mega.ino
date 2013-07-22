@@ -118,7 +118,7 @@ void setup() {
   Serial2.begin( SD_SERIAL_BAUDRATE );
   
   MPU.selectDevice( DEVICE_TO_USE );
-  MPU.init( MPU_UPDATE_RATE, MPU_MAG_MIX_GYRO_AND_SOME_MAG, MAG_UPDATE_RATE, MPU_LPF_RATE );   // start the MPU
+  MPU.init( MPU_UPDATE_RATE, MPU_MAG_MIX_GYRO_ONLY, MAG_UPDATE_RATE, MPU_LPF_RATE );   // start the MPU
   
   mpu_set_accel_fsr( MPU_ACCEL_FSR ); // sets full-scale range (+/- 2, 4, 8, 16)
   mpu_set_gyro_fsr( MPU_GYRO_FSR ); // (+/- 250, 500, 1000, 2000)
@@ -150,8 +150,6 @@ void loop() {
         active_state_counter = 0;
       } 
     }
-    
-
     
   } else {
     

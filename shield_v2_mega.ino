@@ -43,26 +43,33 @@ MPU9150Lib MPU; // the MPU object
 #define SD_SERIAL_BAUDRATE              921600 // baudrate; serial port for logging
 
 #define MPU_ACCEL_FSR                   4 // defines full-scale range ( +/- 2, 4, 8, 16 )
-#define MPU_GYRO_FSR                  250 // gyro full scale range ( +/- 250, 500, 1000, 2000 )
+#define MPU_GYRO_FSR                  1000 // gyro full scale range ( +/- 250, 500, 1000, 2000 )
 
 // #define TALK_TO_USB
 // #define MPULIB_DEBUG
 // #define ANNOUNCE_ACCEL_RANGE
 // #define ANNOUNCE_SAMPLE_RATE
 
+
+#define SWITCH_PIN 7
+
 #define TIME_LIMIT 0 // (in milliseconds) time limit for any recording session
 
 const char SEPARATOR = ',';
 
-#define RECORD_BUFFER_LENGTH 32
-#define RECORD_FIELDS 7
+#define RECORD_BUFFER_LENGTH 32 // buffer length (how many records to store before saving to card?)
+#define RECORD_FIELDS 6
 
-signed long record_buffer[ RECORD_BUFFER_LENGTH ][ RECORD_FIELDS ];
-int record_buffer_counter = 0;
+
+// BUFFERS (for sensor values and time)
+signed short record_buffer[ RECORD_BUFFER_LENGTH ][ RECORD_FIELDS ];  // buffer for the accelerometer and gyro data (short integers)
+unsigned long time_buffer[ RECORD_BUFFER_LENGTH ];             // buffer for time (has own buffer due to different type: unsigned long)
+
+
+int record_buffer_counter = 0; // counter for _both_ time and record buffer
 
 
 enum RECORD_FIELD_INDICES {
-  TIME,
   
   RAW_ACCELEROMETER_X,      //
   RAW_ACCELEROMETER_Y,      //
@@ -83,10 +90,21 @@ short raw_gyro[3];           // in hardware units
 short raw_accelerometer[3];  // in hardware units
 // short raw_magnetometer[3];   // in hardware units
 
-unsigned long lastTimestamp;
+unsigned long last_timestamp;
 short sensors;
 unsigned char more;
 unsigned long timestamp;
+
+
+unsigned long start_time;
+boolean active = false;
+
+int inactive_state_counter = 0;
+int active_state_counter = 0;
+
+int INACTIVE_THRESHOLD = 50;
+int ACTIVE_THRESHOLD = 25;
+
 
 void setup() {
   
@@ -104,72 +122,115 @@ void setup() {
   
   mpu_set_accel_fsr( MPU_ACCEL_FSR ); // sets full-scale range (+/- 2, 4, 8, 16)
   mpu_set_gyro_fsr( MPU_GYRO_FSR ); // (+/- 250, 500, 1000, 2000)
-  //srod wuz her
   
   // dmp_set_fifo_rate( MPU_UPDATE_RATE );
   mpu_set_sample_rate( MPU_UPDATE_RATE ); // allerede satt i init
   
+  #ifdef ENABLE_SWITCH
+    // set the toggle pin
+    pinMode( SWITCH_PIN, INPUT );
+  #endif
+  
 }
+
+
 
 void loop() {
   
-  if ( millis() < TIME_LIMIT || TIME_LIMIT == 0 ) { // leave for ritual reasons
+  if ( digitalRead( SWITCH_PIN ) ) {
     
-    readSensorsDmpFromFifo();
+    inactive_state_counter = 0;
     
-    if ( lastTimestamp < timestamp ) {
+    if ( ! active ) {
+      active_state_counter++;
+      
+      if ( active_state_counter >= ACTIVE_THRESHOLD ) {
+        start_time = millis();
+        active = true;
+        active_state_counter = 0;
+      } 
+    }
     
-    // mpu_get_accel_reg( raw_accelerometer, &timestamp );
-    // mpu_get_gyro_reg( raw_gyro, &timestamp );
-      
-      record_buffer[record_buffer_counter][TIME] = timestamp;
-      
-      record_buffer[record_buffer_counter][RAW_ACCELEROMETER_X] = raw_accelerometer[VEC3_X];
-      record_buffer[record_buffer_counter][RAW_ACCELEROMETER_Y] = raw_accelerometer[VEC3_Y];
-      record_buffer[record_buffer_counter][RAW_ACCELEROMETER_Z] = raw_accelerometer[VEC3_Z];
-      
-      record_buffer[record_buffer_counter][RAW_GYRO_X] = raw_gyro[VEC3_X];
-      record_buffer[record_buffer_counter][RAW_GYRO_Y] = raw_gyro[VEC3_Y];
-      record_buffer[record_buffer_counter][RAW_GYRO_Z] = raw_gyro[VEC3_Z];
-      
-      // record_buffer[record_buffer_counter][RAW_QUATERNION_W] = quaternion[0];
-      // record_buffer[record_buffer_counter][RAW_QUATERNION_X] = quaternion[1];
-      // record_buffer[record_buffer_counter][RAW_QUATERNION_Y] = quaternion[2];
-      // record_buffer[record_buffer_counter][RAW_QUATERNION_Z] = quaternion[3];
-      
-      // increase the counter or if full reset counter and and write buffer contents to external storage
-      if ( record_buffer_counter < (RECORD_BUFFER_LENGTH -1) ) {
-        record_buffer_counter++;
-      } else {
-        // write all buffered values
-        recordFromBuffer();
-        record_buffer_counter = 0;
-      }
-      
-    } // time limit
-      
-      lastTimestamp = timestamp;
-      
-      /*
-      raw_accelerometer[VEC3_X] = 0;
-      raw_accelerometer[VEC3_Y] = 0;
-      raw_accelerometer[VEC3_Z] = 0;
-      
-      raw_gyro[VEC3_X] = 0;
-      raw_gyro[VEC3_Y] = 0;
-      raw_gyro[VEC3_Z] = 0;
-      */
-  
-    // }
-  
-  
+
+    
   } else {
     
-    // one minute has elapsed, do nothing
-    while(1) {}
+    active_state_counter = 0;
+    
+    if ( active ) {
+      inactive_state_counter++;
+      
+      if ( inactive_state_counter >= INACTIVE_THRESHOLD ) {
+        start_time = 0;
+        active = false;
+        inactive_state_counter = 0;
+      }
+      
+    } 
     
   }
   
+  
+  if ( active ) {
+    
+    if ( millis() < TIME_LIMIT || TIME_LIMIT == 0 ) { // TIME_LIMIT limits the recording sessions, and records until power loss if 0
+      
+      readSensorsDmpFromFifo();
+      // readSensorsFromRegisters();
+      
+      if ( last_timestamp < timestamp ) { // ensures that the a reading is fresh, and not a duplicate
+      
+      // mpu_get_accel_reg( raw_accelerometer, &timestamp );
+      // mpu_get_gyro_reg( raw_gyro, &timestamp );
+        
+        // record_buffer[record_buffer_counter][TIME] = timestamp;
+        time_buffer[record_buffer_counter] = (timestamp - start_time);
+        
+        record_buffer[record_buffer_counter][RAW_ACCELEROMETER_X] = raw_accelerometer[VEC3_X];
+        record_buffer[record_buffer_counter][RAW_ACCELEROMETER_Y] = raw_accelerometer[VEC3_Y];
+        record_buffer[record_buffer_counter][RAW_ACCELEROMETER_Z] = raw_accelerometer[VEC3_Z];
+        
+        record_buffer[record_buffer_counter][RAW_GYRO_X] = raw_gyro[VEC3_X];
+        record_buffer[record_buffer_counter][RAW_GYRO_Y] = raw_gyro[VEC3_Y];
+        record_buffer[record_buffer_counter][RAW_GYRO_Z] = raw_gyro[VEC3_Z];
+        
+        // record_buffer[record_buffer_counter][RAW_QUATERNION_W] = quaternion[0];
+        // record_buffer[record_buffer_counter][RAW_QUATERNION_X] = quaternion[1];
+        // record_buffer[record_buffer_counter][RAW_QUATERNION_Y] = quaternion[2];
+        // record_buffer[record_buffer_counter][RAW_QUATERNION_Z] = quaternion[3];
+        
+        // increase the counter or if full reset counter and and write buffer contents to external storage
+        if ( record_buffer_counter < (RECORD_BUFFER_LENGTH -1) ) {
+          record_buffer_counter++;
+        } else {
+            recordFromBuffer(); // write down all buffered values
+            record_buffer_counter = 0; // reset buffer counter
+        }
+        
+      } // time limit
+        
+        last_timestamp = timestamp;
+        
+        /*
+        raw_accelerometer[VEC3_X] = 0;
+        raw_accelerometer[VEC3_Y] = 0;
+        raw_accelerometer[VEC3_Z] = 0;
+        
+        raw_gyro[VEC3_X] = 0;
+        raw_gyro[VEC3_Y] = 0;
+        raw_gyro[VEC3_Z] = 0;
+        */
+    
+      // }
+    
+    
+    } else {
+      
+      // one minute has elapsed, do nothing
+      while( 1 ) {}
+      
+    } 
+  }
 }
 
 
@@ -182,7 +243,7 @@ void recordFromBuffer() {
   
   for ( int i = 0; i < RECORD_BUFFER_LENGTH; i++ ) {
     
-    Serial2.print( record_buffer[i][TIME] ); separate();
+    Serial2.print( time_buffer[i] ); separate();
     
     Serial2.print( record_buffer[i][RAW_ACCELEROMETER_X] ); separate();
     Serial2.print( record_buffer[i][RAW_ACCELEROMETER_Y] ); separate();
@@ -217,7 +278,7 @@ void readSensorsDmpFromFifo() {
 
 void record() {
   
-    Serial2.print( timestamp ); separate();
+    Serial2.print( millisFromStart() ); separate();
     
     Serial2.print( raw_accelerometer[VEC3_X] ); separate();
     Serial2.print( raw_accelerometer[VEC3_Y] ); separate();
@@ -230,6 +291,10 @@ void record() {
     endRecord();
 }
 
+
+unsigned long millisFromStart() {
+  return millis() - start_time;
+}
 
 /**********************************************************/
 /***********   FORMATTING FUNCTIONS   *********************/

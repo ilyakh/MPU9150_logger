@@ -57,7 +57,7 @@ const char SEPARATOR = ',';
 #define RECORD_BUFFER_LENGTH 32
 #define RECORD_FIELDS 7
 
-int record_buffer[ RECORD_BUFFER_LENGTH ][ RECORD_FIELDS ];
+signed long record_buffer[ RECORD_BUFFER_LENGTH ][ RECORD_FIELDS ];
 int record_buffer_counter = 0;
 
 

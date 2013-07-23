@@ -10,12 +10,13 @@
 
 
 // #define MPU_MAXIMAL
+// #define MPULIB_DEBUG
 
 //  DEVICE_TO_USE selects whether the IMU at address 0x68 (default) or 0x69 is used
 //    0 = use the device at 0x68
 //    1 = use the device at 0x69
 
-#define  DEVICE_TO_USE    1
+#define  DEVICE_TO_USE    1 // DroTek sensors are preconfigured to 1 (0x69)
 
 
 MPU9150Lib MPU; // the MPU object
@@ -42,14 +43,10 @@ MPU9150Lib MPU; // the MPU object
 #define MPU_LPF_RATE                    20 // low pass filter rate and can be between 5 and 188Hz
 #define SD_SERIAL_BAUDRATE              921600 // baudrate; serial port for logging
 
-#define MPU_ACCEL_FSR                   4 // defines full-scale range ( +/- 2, 4, 8, 16 )
+#define MPU_ACCEL_FSR                   8 // defines full-scale range ( +/- 2, 4, 8, 16 )
 #define MPU_GYRO_FSR                  1000 // gyro full scale range ( +/- 250, 500, 1000, 2000 )
 
 // #define TALK_TO_USB
-// #define MPULIB_DEBUG
-// #define ANNOUNCE_ACCEL_RANGE
-// #define ANNOUNCE_SAMPLE_RATE
-
 
 #define SWITCH_PIN 7
 
@@ -57,16 +54,8 @@ MPU9150Lib MPU; // the MPU object
 
 const char SEPARATOR = ',';
 
-#define RECORD_BUFFER_LENGTH 32 // buffer length (how many records to store before saving to card?)
-#define RECORD_FIELDS 6
-
-
-// BUFFERS (for sensor values and time)
-signed short record_buffer[ RECORD_BUFFER_LENGTH ][ RECORD_FIELDS ];  // buffer for the accelerometer and gyro data (short integers)
-unsigned long time_buffer[ RECORD_BUFFER_LENGTH ];             // buffer for time (has own buffer due to different type: unsigned long)
-
-int record_buffer_counter = 0; // counter for _both_ time and record buffer
-
+#define RECORD_BUFFER_LENGTH 8      // buffer length (how many records to store before saving to card?)
+#define RECORD_FIELDS 6             // how many fields does the 2-dim array have to have to accomodate the sensor values from the enum?
 
 enum RECORD_FIELD_INDICES {
   
@@ -76,13 +65,19 @@ enum RECORD_FIELD_INDICES {
                             //  ORDERING OF ITEMS IN THE CSV LOG FILE
   RAW_GYRO_X,               //
   RAW_GYRO_Y,               //
-  RAW_GYRO_Z,               //
-                            //
-  // RAW_QUATERNION_W,         //
-  // RAW_QUATERNION_X,         //
-  // RAW_QUATERNION_Y,         //
-  // RAW_QUATERNION_Z          //
+  RAW_GYRO_Z                //
+
 };
+
+
+// BUFFERS (for sensor values and time)
+signed short record_buffer[ RECORD_BUFFER_LENGTH ][ RECORD_FIELDS ];  // buffer for the accelerometer and gyro data (short integers)
+unsigned long time_buffer[ RECORD_BUFFER_LENGTH ];             // buffer for time (has own buffer due to different type: unsigned long)
+
+int record_buffer_counter = 0; // counter for _both_ time and record buffer
+
+
+
 
 long  quaternion[4]; 
 short raw_gyro[3];           // in hardware units
@@ -99,15 +94,15 @@ unsigned long start_time;
 boolean active = false;
 
 ////
-//  IMPORTANT! This parameter configures the device to either accept 
+//  IMPORTANT!
 ///
-boolean SWITCH_ENABLED = true;
+boolean SWITCH_ENABLED = true; // does the device have an on/off switch?
 
-int inactive_state_counter = 0;
-int active_state_counter = 0;
+int inactive_state_counter = 0; // counts loops before stopping recording
+int active_state_counter = 0; // counts loops before starting recording
 
-int INACTIVE_THRESHOLD = 50;
-int ACTIVE_THRESHOLD = 25;
+int INACTIVE_THRESHOLD = 250; // during how many loops does the switch has to be on, to _STOP recording_?
+int ACTIVE_THRESHOLD = 100; // during how many loops does the switch has to be off, to _BEGIN recording_?
 
 
 
@@ -180,9 +175,6 @@ void loop() {
       // readSensorsFromRegisters();
       
       if ( last_timestamp < timestamp ) { // ensures that the a reading is fresh, and not a duplicate
-      
-      // mpu_get_accel_reg( raw_accelerometer, &timestamp );
-      // mpu_get_gyro_reg( raw_gyro, &timestamp );
         
         // record_buffer[record_buffer_counter][TIME] = timestamp;
         time_buffer[record_buffer_counter] = (timestamp - start_time);
@@ -194,11 +186,6 @@ void loop() {
         record_buffer[record_buffer_counter][RAW_GYRO_X] = raw_gyro[VEC3_X];
         record_buffer[record_buffer_counter][RAW_GYRO_Y] = raw_gyro[VEC3_Y];
         record_buffer[record_buffer_counter][RAW_GYRO_Z] = raw_gyro[VEC3_Z];
-        
-        // record_buffer[record_buffer_counter][RAW_QUATERNION_W] = quaternion[0];
-        // record_buffer[record_buffer_counter][RAW_QUATERNION_X] = quaternion[1];
-        // record_buffer[record_buffer_counter][RAW_QUATERNION_Y] = quaternion[2];
-        // record_buffer[record_buffer_counter][RAW_QUATERNION_Z] = quaternion[3];
         
         // increase the counter or if full reset counter and and write buffer contents to external storage
         if ( record_buffer_counter < (RECORD_BUFFER_LENGTH -1) ) {
@@ -212,6 +199,7 @@ void loop() {
         
         last_timestamp = timestamp;
         
+        // reset variables to mark duplicates
         /*
         raw_accelerometer[VEC3_X] = 0;
         raw_accelerometer[VEC3_Y] = 0;
@@ -253,13 +241,6 @@ void recordFromBuffer() {
     Serial2.print( record_buffer[i][RAW_GYRO_X] ); separate();
     Serial2.print( record_buffer[i][RAW_GYRO_Y] ); separate();
     Serial2.print( record_buffer[i][RAW_GYRO_Z] ); // separate();
-    
-    /*
-    Serial2.print( record_buffer[i][RAW_QUATERNION_W] ); separate();
-    Serial2.print( record_buffer[i][RAW_QUATERNION_X] ); separate();
-    Serial2.print( record_buffer[i][RAW_QUATERNION_Y] ); separate();
-    Serial2.print( record_buffer[i][RAW_QUATERNION_Z] );
-    */
     
     endRecord(); // new line
     

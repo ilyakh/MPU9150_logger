@@ -2,6 +2,7 @@ import matplotlib.pyplot as pyplot
 import pandas
 import sys
 import time
+from pandas import DataFrame
 
 if __name__ == "__main__":
 
@@ -38,11 +39,34 @@ if __name__ == "__main__":
             timestamps[i+1] - timestamps[i]
         )
 
-    print delta_t[0:50]
+    timedelta_average = ( float(sum( delta_t )) / len( delta_t ) )
+    
+    timedeltas_above_double_average = \
+        [ i for i in delta_t if (i > ( 2.0 * timedelta_average )) ]
 
     print "Maximal timedelta", max( delta_t )
-    print "Average timedelta", ( sum( delta_t) / len( delta_t ) )
+    print "Average timedelta", timedelta_average
+    
+    
+    timedeltas_above_double_average_percent = \
+        float( len( timedeltas_above_double_average ) ) / len( delta_t ) * 100
 
+    print "Timedeltas above double average",
+    print len(timedeltas_above_double_average), 
+    print timedeltas_above_double_average_percent
+
+    last_timestamp = timestamps[-1]
+
+    print "Last timestamp", timestamps[-1]
+    print "Maximal timestamp", max( timestamps )
+    print "Average frequency", float( len( timestamps ) ) / ( float( last_timestamp ) / 1000 ) 
+
+
+    delta_t = DataFrame( delta_t )
+    delta_t.plot()
+    pyplot.show()
+
+    print "Timedelta standard deviation", float( delta_t.std() )
 
     font = {
         'family': 'Consolas',

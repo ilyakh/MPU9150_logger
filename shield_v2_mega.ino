@@ -54,8 +54,8 @@ MPU9150Lib MPU; // the MPU object
 
 const char SEPARATOR = ',';
 
-#define RECORD_BUFFER_LENGTH 8      // buffer length (how many records to store before saving to card?)
-#define RECORD_FIELDS 6             // how many fields does the 2-dim array have to have to accomodate the sensor values from the enum?
+#define RECORD_BUFFER_LENGTH 8      // buffer size (yes! buffer size!) (how many records to store before saving to card?)
+#define RECORD_FIELDS 6             // fields in the 2-dim array for keeping sensor values
 
 enum RECORD_FIELD_INDICES {
   
@@ -84,14 +84,14 @@ short raw_gyro[3];           // in hardware units
 short raw_accelerometer[3];  // in hardware units
 // short raw_magnetometer[3];   // in hardware units
 
-unsigned long last_timestamp;
-short sensors;
-unsigned char more;
-unsigned long timestamp;
+unsigned long     last_timestamp;
+short             sensors;
+unsigned char     more;
+unsigned long     timestamp;
 
 
-unsigned long start_time;
-boolean active = false;
+unsigned long     start_time;
+boolean           active = false;
 
 ////
 //  IMPORTANT!
@@ -101,8 +101,8 @@ boolean SWITCH_ENABLED = true; // does the device have an on/off switch?
 int inactive_state_counter = 0; // counts loops before stopping recording
 int active_state_counter = 0; // counts loops before starting recording
 
-int INACTIVE_THRESHOLD = 250; // during how many loops does the switch has to be on, to _STOP recording_?
-int ACTIVE_THRESHOLD = 100; // during how many loops does the switch has to be off, to _BEGIN recording_?
+int INACTIVE_THRESHOLD = 150; // during how many loops does the switch has to be on, to _STOP recording_?
+int ACTIVE_THRESHOLD = 50; // during how many loops does the switch has to be off, to _BEGIN recording_?
 
 
 
@@ -167,7 +167,7 @@ void loop() {
   }
   
   
-  if ( active || (! SWITCH_ENABLED) ) {
+  if ( active || (! SWITCH_ENABLED) ) { // also available on devices without switch!
     
     if ( millis() < TIME_LIMIT || TIME_LIMIT == 0 ) { // TIME_LIMIT limits the recording sessions, and records until power loss if 0
       
